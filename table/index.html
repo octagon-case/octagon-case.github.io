@@ -443,10 +443,7 @@ $('replayBtn').onclick=()=>{restart(performance.now()/1000);};
 let orbit={yaw:-.35,pitch:.6,dist:1.0,drag:null};
 function startPreview(){
   renderer.setClearColor(0x1c5050,1);
-  /* a quiet studio table */
-  const floor=new THREE.Mesh(new THREE.CircleGeometry(12,96).rotateX(-T/2),new THREE.MeshStandardMaterial({color:0x2a6363,roughness:.92,metalness:0}));floor.receiveShadow=true;floor.position.y=-.0002;scene.add(floor);
-  scene.fog=new THREE.Fog(0x1c5050,1.4,4.5);
-  shadowPlane.visible=false;
+  /* the same deep teal as Eight Layers; the table is only its shadow */
   $('intro').classList.add('gone');$('ov').classList.add('on');$('top').style.opacity=0;renderer.domElement.classList.add('on');
   $('exitBtn').textContent='Close';$('moveBtn').classList.add('hide');
   placed=true;restart(performance.now()/1000);
