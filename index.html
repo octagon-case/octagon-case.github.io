@@ -542,7 +542,26 @@ function loop(){
   renderer.render(scene,camera);
 }
 $('replayBtn').onclick=()=>{initAudio();film.reset();film.advance(0);tex.needsUpdate=true;};
-$('begin').onclick=async()=>{initAudio();$('begin').disabled=true;try{await startAR();}catch(e){console.error(e);$('status').textContent='The camera could not start. Allow camera access and try again.';$('begin').disabled=false;}};
+const inApp=/Instagram|FBAN|FBAV|FB_IAB|Line\/|Snapchat|LinkedInApp|TikTok|musical_ly|BytedanceWebview/i.test(navigator.userAgent);
+const say=s=>{$('status').textContent=s;};
+async function askCamera(){
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){const e=new Error('no camera API');e.name='NoMedia';throw e;}
+  const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false});
+  s.getTracks().forEach(t=>t.stop());
+}
+$('begin').onclick=async()=>{
+  initAudio();$('begin').disabled=true;
+  try{say('Asking for the camera…');await askCamera();}
+  catch(e){console.error(e);$('begin').disabled=false;
+    if(inApp)say('This app blocks the camera. Tap ··· and choose “Open in Safari” or “Open in browser”.');
+    else if(e.name==='NotAllowedError'||e.name==='SecurityError')say('Camera access is blocked for this site. Allow the camera in your browser settings, then reload the page.');
+    else if(e.name==='NoMedia'||e.name==='NotSupportedError')say('This browser can’t use the camera. Open the link in Safari (iPhone) or Chrome (Android).');
+    else if(e.name==='NotReadableError')say('The camera is busy in another app. Close it and try again.');
+    else say('Camera error: '+e.name+' '+e.message);
+    return;}
+  try{await startAR();}catch(e){console.error(e);$('begin').disabled=false;say('Could not start: '+(e&&e.message?e.message:e));}
+};
+if(inApp)say('To use the camera, open this page in Safari or Chrome (tap ··· → Open in browser).');
 window.__dbg={get film(){return film;},found,lost};
 </script>
 </body>
