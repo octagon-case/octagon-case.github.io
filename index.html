@@ -345,7 +345,7 @@ let dateTex;
     glow.material.opacity=(heart?.08:0)+.5*pulse;
     dialMat.emissiveIntensity=.03+.6*pulse+(!heart&&st>=5&&st<8?.18:0);
     /* framing: keep the watch clear of the caption */
-    const panelOn=1-E(clamp((t-TL.heart)/.6));
+    const ui=uiAt(t),panelOn=ui*(1-E(clamp((t-TL.heart)/.6)));
     const panelPx=118*panelOn,topPx=40,frac=Math.max(.35,(CH-panelPx-topPx)/CH),tn=Math.tan(camera.fov*T/360);
     const dist=Math.max(cur.fh/frac/(2*tn),cur.fw/(2*tn*camera.aspect))*.9;
     const visH=2*tn*dist,shift=((panelPx-topPx)/2/CH)*visH;
@@ -356,6 +356,8 @@ let dateTex;
     if(caption.swapT>=0){const d=t-caption.swapT;if(d>=.28)caption.shown=caption.next;if(d>.63)caption.swapT=-1;}
   }
   const clamp=x=>x<0?0:x>1?1:x,E=x=>1-Math.pow(1-x,3);
+  /* the card itself is only the watch: the type arrives once the film starts */
+  const uiAt=x=>{const u=clamp((x-.25)/1.2);return u*u*(3-2*u);};
   /* ---- 2D type, spaced by hand so every phone draws it the same ---- */
   function spaced(str,x,y,size,weight,family,track,color,align){
     g.font=`${weight} ${size*k}px ${family}`;g.fillStyle=color;g.textBaseline='alphabetic';
@@ -435,8 +437,8 @@ let dateTex;
     g.globalAlpha=1;g.drawImage(canvas3,0,0);
     /* the logo, top centre */
     const lh=17,lw=lh*logoW/logoH,topA=t<TL.end?1:1-clamp((t-TL.end-.9)/.8);
-    g.globalAlpha=.9*topA;g.drawImage(logoWhite,(195-lw/2)*k,(14)*k,lw*k,lh*k);g.globalAlpha=1;
-    const pA=1-clamp((t-TL.heart)/.6);drawPanel(pA,1-pA);
+    g.globalAlpha=.9*topA*uiAt(t);g.drawImage(logoWhite,(195-lw/2)*k,(14)*k,lw*k,lh*k);g.globalAlpha=1;
+    const pA=1-clamp((t-TL.heart)/.6);drawPanel(pA*uiAt(t),1-pA);
     const iA=t<TL.end?E(clamp((t-TL.invite)/.9)):1-clamp((t-TL.end)/.6);drawInvite(iA);
     drawEnd();
   }
@@ -486,7 +488,7 @@ window.__renderAt=async(variant,W,t)=>{await logoReady;await fontsReady;window._
 window.__TL=TL;
 
 /* ---------- AR: find the card, play the film on it ---------- */
-const CACHE_KEY='octagon-cards-v1';
+const CACHE_KEY='octagon-cards-v2';
 function b64(buf){let s='';const b=new Uint8Array(buf);for(let i=0;i<b.length;i+=0x8000)s+=String.fromCharCode.apply(null,b.subarray(i,i+0x8000));return btoa(s);}
 function unb64(s){const b=atob(s),u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return u;}
 let film=null;
