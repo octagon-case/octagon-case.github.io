@@ -89,6 +89,10 @@ function createFilm(W,H){
   renderer.outputEncoding=THREE.sRGBEncoding;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=.98;
   renderer.setClearColor(0x1c5050,1);
   const scene=new THREE.Scene();
+  /* a soft pool of light behind the watch */
+  {const bc=document.createElement('canvas');bc.width=360;bc.height=450;const bx=bc.getContext('2d');
+   const bg=bx.createRadialGradient(180,205,10,180,225,330);bg.addColorStop(0,'#2b6c6c');bg.addColorStop(.55,'#1c5050');bg.addColorStop(1,'#123a3a');
+   bx.fillStyle=bg;bx.fillRect(0,0,360,450);const bt=new THREE.CanvasTexture(bc);bt.encoding=THREE.sRGBEncoding;scene.background=bt;}
   const camera=new THREE.PerspectiveCamera(30,W/H,.1,300);
   const MAXANI=renderer.capabilities.getMaxAnisotropy();
   let pivot,tilt,model,layers,hands,dialMat,glow,braceletG,loopG;
@@ -330,7 +334,7 @@ hands={};hands.h={rotation:{z:0}};hands.m={rotation:{z:0}};hands.s={rotation:{z:
   const logoWhite=tintLogo(LOGO_IMG,'#e9ecf2',Math.round(168*k*2));
 
   /* ---- state ---- */
-  let v='steel',t=0,prevT=0,cur,lastSec=-1,ev=new Set(),caption={shown:-1,next:0,swapT:-1};
+  let card=null,v='steel',t=0,prevT=0,cur,lastSec=-1,ev=new Set(),caption={shown:-1,next:0,swapT:-1};
   const S={};
   function setVariant(name){
     v=name;const V=VARIANTS[v];
@@ -350,6 +354,10 @@ hands={};hands.h={rotation:{z:0}};hands.m={rotation:{z:0}};hands.s={rotation:{z:
     cur={tilt:tg.tilt,spin:tg.spin,c:tg.c,fw:tg.fit[0],fh:tg.fit[1]};
     layers.forEach(L=>{L.lifted=false;L.g.position.z=L.a;});
     caption={shown:0,next:0,swapT:-1};
+    card=null;pose(0);
+    pivot.updateMatrixWorld(true);
+    const bx=new THREE.Box3().setFromObject(pivot),c=bx.getCenter(new THREE.Vector3()),sz=bx.getSize(new THREE.Vector3()),tn=Math.tan(camera.fov*T/360),fill=.9;
+    card={x:c.x,y:c.y,d:Math.max(sz.y/(2*tn*fill),sz.x/(2*tn*camera.aspect*fill))+sz.z/2+c.z};
     pose(0);
   }
   /* advance the 3D state by dt (same smoothing as the page) */
@@ -376,7 +384,10 @@ hands={};hands.h={rotation:{z:0}};hands.m={rotation:{z:0}};hands.s={rotation:{z:
     const panelPx=118*panelOn,topPx=40,frac=Math.max(.35,(CH-panelPx-topPx)/CH),tn=Math.tan(camera.fov*T/360);
     const dist=Math.max(cur.fh/frac/(2*tn),cur.fw/(2*tn*camera.aspect))*.9;
     const visH=2*tn*dist,shift=((panelPx-topPx)/2/CH)*visH;
-    camera.position.set(0,-shift,dist);camera.lookAt(0,-shift,0);
+    /* the card: the whole watch, centred, with room around it; the film eases from there to its own framing */
+    const cx=card?card.x:0,cy=card?card.y:-shift,cd=card?card.d:dist;
+    const px=cx+(0-cx)*ui,py=cy+(-shift-cy)*ui,pz=cd+(dist-cd)*ui;
+    camera.position.set(px,py,pz);camera.lookAt(px,py,0);
     S.pulse=pulse;
     /* caption swap: fade out .28s, change, fade in .35s */
     if(st!==caption.next){caption.next=st;caption.swapT=t;}
@@ -515,7 +526,7 @@ window.__renderAt=async(variant,W,t)=>{await logoReady;await fontsReady;window._
 window.__TL=TL;
 
 /* ---------- AR: find the card, play the film on it ---------- */
-const CACHE_KEY='octagon-cards-v3';
+const CACHE_KEY='octagon-cards-v4';
 function b64(buf){let s='';const b=new Uint8Array(buf);for(let i=0;i<b.length;i+=0x8000)s+=String.fromCharCode.apply(null,b.subarray(i,i+0x8000));return btoa(s);}
 function unb64(s){const b=atob(s),u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return u;}
 let film=null;
