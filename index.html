@@ -65,12 +65,12 @@ const VARIANTS={
   rubber:{label:'The piece · Rubber',yaw:.24,loop:true,strap:'Tapisserie rubber strap.'},
 };
 const INFO=[
-  ['Sapphire crystal','Scratch-proof sapphire. The window to everything below it.'],
+  ['Sapphire crystal','Scratch-proof sapphire, laid over the screen.'],
   ['The octagon','Gérald Genta’s 1972 bezel, held by eight hexagonal white-gold screws.'],
-  ['The hands','Polished baton hands. Look closely: the seconds are live.'],
-  ['Indices & date','Applied indices, the double baton at twelve, and the date at three.'],
-  ['Grande Tapisserie','AP’s signature pattern, drawn in light by an always-on display.'],
-  ['Apple silicon','Chip, sensors and battery. The intelligence, sealed inside steel.'],
+  ['The display','Hands, indices, date and the Grande Tapisserie, all drawn in light. The seconds are live.'],
+  ['Touch layer','A sensor sheet finer than a hair. It turns the sapphire into a screen you can touch.'],
+  ['Apple silicon','The chip and its sensors. The intelligence, sealed inside steel.'],
+  ['Battery','All-day power, shaped to sit inside the octagon.'],
   ['Case & strap',''],
   ['The caseback','Health sensors on the inside. Your name on the outside.'],
 ];
@@ -152,35 +152,13 @@ function layer(a,e,extra){const g=new THREE.Group();g.position.z=a;model.add(g);
     const m=new THREE.Mesh(hex,M.wgold);m.rotation.z=T/6;sc.add(m);
     const sl=new THREE.Mesh(slotG,M.dark);sl.position.z=.02;sl.rotation.z=T/5;sc.add(sl);g.add(sc);}
 }
-/* 03 hands */
-hands={};
-{const g=layer(0,4.05);
-  const lance=(w,len,tail)=>{const sh=new THREE.Shape();sh.moveTo(-w*.42,-tail);sh.lineTo(w*.42,-tail);sh.lineTo(w/2,len*.78);sh.lineTo(0,len);sh.lineTo(-w/2,len*.78);sh.closePath();
-    const geo=new THREE.ExtrudeGeometry(sh,{depth:.012,bevelEnabled:true,bevelThickness:.012,bevelSize:.012,bevelSegments:2});return geo;};
-  const mk=(geo,z,mat)=>{const p=new THREE.Group();p.add(new THREE.Mesh(geo,mat));p.position.z=z;g.add(p);return p;};
-  hands.h=mk(lance(.09,.82,.12),.11,M.hand);
-  hands.m=mk(lance(.075,1.3,.14),.15,M.hand);
-  const sg=new THREE.Group();sg.position.z=.19;g.add(sg);
-  const sgeo=new THREE.BoxGeometry(.016,1.6,.012);sgeo.translate(0,.5,0);sg.add(new THREE.Mesh(sgeo,M.polish));
-  const cw=new THREE.Mesh(new THREE.CylinderGeometry(.05,.05,.015,32).rotateX(T/2),M.polish);cw.position.y=-.29;sg.add(cw);
-  hands.s=sg;
-  const cap=new THREE.Mesh(new THREE.CylinderGeometry(.05,.05,.05,32).rotateX(T/2),M.polish);cap.position.z=.21;g.add(cap);
-}
-/* 04 indices + date */
-let dateTex;
-{const g=layer(0,3.1);
-  const geo=new THREE.ExtrudeGeometry(rr(.062,.37,.015),{depth:.02,bevelEnabled:true,bevelThickness:.015,bevelSize:.012,bevelSegments:2});
-  for(let h=0;h<12;h++){if(h===3)continue;const th=T/2-h*T/6,r=1.12;
-    (h===0?[-.052,.052]:[0]).forEach(o=>{const m=new THREE.Mesh(geo,M.hand);m.position.set(r*Math.cos(th)+o*Math.cos(th-T/2),r*Math.sin(th)+o*Math.sin(th-T/2),.03);m.rotation.z=th-T/2;g.add(m);});}
-  const [c,x]=cv(128);x.fillStyle='#f6f6f4';x.fillRect(0,0,128,128);x.fillStyle='#0d0d0d';x.font='700 70px Helvetica, Arial, sans-serif';x.textAlign='center';x.textBaseline='middle';x.fillText(String(new Date().getDate()),64,68);
-  dateTex=tex(c);
-  const fr=new THREE.Mesh(new THREE.BoxGeometry(.35,.32,.03),M.polish);fr.position.set(1.03,0,.03);g.add(fr);
-  const dw=new THREE.Mesh(new THREE.PlaneGeometry(.29,.26),new THREE.MeshStandardMaterial({map:dateTex,roughness:.6,metalness:0}));dw.position.set(1.03,0,.047);g.add(dw);
-}
-/* 05 Grande Tapisserie display */
+/* 03 the display: one screen. Hands, indices, date and the Grande Tapisserie are all pixels */
+hands={};hands.h={rotation:{z:0}};hands.m={rotation:{z:0}};hands.s={rotation:{z:0}};
 
-{const g=layer(0,2.25);
-  const [c,x]=cv(1024);const S=1024,C=512,IN=448;
+{const g=layer(0,3.95);
+  const S=1024,C=512,IN=448,PX=320;            /* 320 px per model unit: the screen is 1.6 units across its radius */
+  /* the face, drawn once: tapisserie, minute track */
+  const [b,x]=cv(S);
   x.fillStyle='#000';x.fillRect(0,0,S,S);
   x.save();x.beginPath();x.arc(C,C,IN,0,T*2);x.clip();x.fillStyle='#55575c';x.fillRect(0,0,S,S);
   const cell=33,ins=3,off=(C%cell);
@@ -191,18 +169,59 @@ let dateTex;
     x.fillStyle='#202125';x.fillRect(x0+5,y0+5,cell-2*ins-10,cell-2*ins-10);}
   const v=x.createRadialGradient(C*.8,C*.75,20,C,C,IN);v.addColorStop(0,'rgba(255,255,255,.10)');v.addColorStop(.55,'rgba(0,0,0,.05)');v.addColorStop(1,'rgba(0,0,0,.5)');x.fillStyle=v;x.fillRect(0,0,S,S);
   x.restore();
-  x.fillStyle='#050506';x.beginPath();x.arc(C,C,512,0,T*2);x.arc(C,C,IN,0,T*2,true);x.fill();
   x.strokeStyle='rgba(120,124,130,.7)';x.lineWidth=2;x.beginPath();x.arc(C,C,IN,0,T*2);x.stroke();
   x.strokeStyle='#e4e4e4';x.lineCap='round';
   for(let i=0;i<60;i++){const a=i/60*T*2,r1=474,r2=i%5?486:490;x.lineWidth=i%5?3:4;x.beginPath();x.moveTo(C+r1*Math.cos(a),C+r1*Math.sin(a));x.lineTo(C+r2*Math.cos(a),C+r2*Math.sin(a));x.stroke();}
-  const t=tex(c);
-  dialMat=new THREE.MeshStandardMaterial({map:t,roughness:.5,metalness:.3,emissive:0xffffff,emissiveMap:t,emissiveIntensity:.03});
-  const d=new THREE.Mesh(new THREE.CircleGeometry(1.6,128),dialMat);d.position.z=.012;g.add(d);
+  /* indices and the date window, rendered as light with a soft drop shadow */
+  const lit=(fn)=>{x.save();x.shadowColor='rgba(0,0,0,.65)';x.shadowBlur=10;x.shadowOffsetX=3;x.shadowOffsetY=5;fn();x.restore();};
+  const bar=(w,l)=>{const gr=x.createLinearGradient(-w/2,0,w/2,0);gr.addColorStop(0,'#c9ccd2');gr.addColorStop(.45,'#ffffff');gr.addColorStop(1,'#9ea3ab');x.fillStyle=gr;x.beginPath();x.roundRect?x.roundRect(-w/2,-l/2,w,l,4):x.rect(-w/2,-l/2,w,l);x.fill();};
+  for(let h=0;h<12;h++){if(h===3)continue;const th=h*T/6,r=1.12*PX;
+    (h===0?[-.052,.052]:[0]).forEach(o=>lit(()=>{x.translate(C+r*Math.sin(th)+o*PX*Math.cos(th),C-r*Math.cos(th)+o*PX*Math.sin(th));x.rotate(th);bar(.062*PX,.37*PX);}));}
+  const DATE=String(new Date().getDate());
+  lit(()=>{x.translate(C+1.03*PX,C);const fw=.35*PX,fh=.32*PX;const gr=x.createLinearGradient(0,-fh/2,0,fh/2);gr.addColorStop(0,'#f2f3f5');gr.addColorStop(1,'#a9adb4');x.fillStyle=gr;x.fillRect(-fw/2,-fh/2,fw,fh);});
+  x.fillStyle='#f6f6f4';x.fillRect(C+1.03*PX-.145*PX,C-.13*PX,.29*PX,.26*PX);
+  x.fillStyle='#0d0d0d';x.font='700 '+Math.round(.21*PX)+'px Helvetica, Arial, sans-serif';x.textAlign='center';x.textBaseline='middle';x.fillText(DATE,C+1.03*PX,C+.01*PX);
+  /* the live layer: hands drawn over the face whenever the time changes */
+  const [c,y]=cv(S);const t=tex(c);
+  const lance=(w,len,tail)=>{y.beginPath();y.moveTo(-w*.42,tail);y.lineTo(w*.42,tail);y.lineTo(w/2,-len*.78);y.lineTo(0,-len);y.lineTo(-w/2,-len*.78);y.closePath();};
+  const hand=(rot,w,len,tail)=>{y.save();y.translate(C,C);y.rotate(-rot);
+    y.save();y.shadowColor='rgba(0,0,0,.7)';y.shadowBlur=12;y.shadowOffsetX=4;y.shadowOffsetY=7;lance(w*PX,len*PX,tail*PX);y.fillStyle='#d9dce1';y.fill();y.restore();
+    const gr=y.createLinearGradient(-w*PX/2,0,w*PX/2,0);gr.addColorStop(0,'#b4b8bf');gr.addColorStop(.48,'#ffffff');gr.addColorStop(.52,'#e6e8ec');gr.addColorStop(1,'#8f949c');
+    lance(w*PX,len*PX,tail*PX);y.fillStyle=gr;y.fill();y.restore();};
+  let last='';
+  function draw(){
+    const k=hands.h.rotation.z.toFixed(4)+'|'+hands.m.rotation.z.toFixed(4)+'|'+hands.s.rotation.z.toFixed(4);
+    if(k===last)return;last=k;
+    y.drawImage(b,0,0);
+    hand(hands.h.rotation.z,.09,.82,.12);
+    hand(hands.m.rotation.z,.075,1.3,.14);
+    y.save();y.translate(C,C);y.rotate(-hands.s.rotation.z);y.shadowColor='rgba(0,0,0,.6)';y.shadowBlur=8;y.shadowOffsetX=3;y.shadowOffsetY=5;
+      y.fillStyle='#f4f5f7';y.fillRect(-.008*PX,-1.3*PX,.016*PX,1.6*PX);y.beginPath();y.arc(0,.29*PX,.05*PX,0,T*2);y.fill();y.restore();
+    const cg=y.createRadialGradient(C-4,C-4,1,C,C,.05*PX);cg.addColorStop(0,'#ffffff');cg.addColorStop(1,'#9aa0a8');y.fillStyle=cg;y.beginPath();y.arc(C,C,.05*PX,0,T*2);y.fill();
+    t.needsUpdate=true;
+  }
+  draw();
+  /* OLED: black when off, every pixel makes its own light */
+  dialMat=new THREE.MeshStandardMaterial({color:0x000000,roughness:.18,metalness:0,emissive:0xffffff,emissiveMap:t});
+  {let ei=.03;Object.defineProperty(dialMat,'emissiveIntensity',{configurable:true,get:()=>.92+ei,set:v=>{ei=v;}});}
+  const d=new THREE.Mesh(new THREE.CircleGeometry(1.6,128),dialMat);d.position.z=.012;d.onBeforeRender=draw;g.add(d);
   const slab=new THREE.Mesh(new THREE.CylinderGeometry(1.62,1.62,.04,96).rotateX(T/2),new THREE.MeshStandardMaterial({color:0x050608,roughness:.3,metalness:.2}));slab.position.z=-.012;g.add(slab);
+  const rim=new THREE.Mesh(new THREE.TorusGeometry(1.615,.012,8,128),M.dark);rim.position.z=.01;g.add(rim);
 }
-/* 06 Apple silicon */
-{const g=layer(-.32,1.25);
-  const bat=new THREE.Mesh(new THREE.BoxGeometry(2.3,1.7,.14),new THREE.MeshStandardMaterial({color:0xb9bdc5,metalness:.9,roughness:.35}));bat.position.z=-.13;g.add(bat);
+/* 04 touch layer: a sensor sheet finer than a hair */
+{const g=layer(-.04,2.85);
+  const [c,x]=cv(512);x.clearRect(0,0,512,512);
+  x.fillStyle='rgba(150,190,200,.10)';x.beginPath();x.arc(256,256,256,0,T*2);x.fill();
+  x.strokeStyle='rgba(185,225,235,.55)';x.lineWidth=1.2;
+  for(let i=8;i<512;i+=16){x.beginPath();x.moveTo(i,0);x.lineTo(i,512);x.stroke();x.beginPath();x.moveTo(0,i);x.lineTo(512,i);x.stroke();}
+  x.globalCompositeOperation='destination-in';x.beginPath();x.arc(256,256,254,0,T*2);x.fill();
+  const t=tex(c);
+  g.add(new THREE.Mesh(new THREE.CircleGeometry(1.64,128),new THREE.MeshStandardMaterial({map:t,transparent:true,roughness:.15,metalness:.2,side:THREE.DoubleSide,depthWrite:false})));
+  g.add(new THREE.Mesh(new THREE.TorusGeometry(1.64,.012,8,128),new THREE.MeshStandardMaterial({color:0xb8c4c8,metalness:.8,roughness:.25})));
+  const flex=new THREE.Mesh(new THREE.BoxGeometry(.42,.7,.01),new THREE.MeshStandardMaterial({color:0xc98a2e,metalness:.5,roughness:.4}));flex.position.set(0,-1.88,-.02);g.add(flex);
+}
+/* 05 Apple silicon */
+{const g=layer(-.3,1.8);
   const [c,x]=cv(512);x.fillStyle='#0c1712';x.fillRect(0,0,512,512);
   x.strokeStyle='rgba(214,218,224,.6)';x.lineWidth=2;
   for(let i=0;i<150;i++){let px=Math.random()*512,py=Math.random()*512;x.beginPath();x.moveTo(px,py);for(let k=0;k<3;k++){if(Math.random()<.5)px+=(Math.random()-.5)*220;else py+=(Math.random()-.5)*220;x.lineTo(px,py);}x.stroke();x.fillStyle='rgba(190,196,204,.8)';x.beginPath();x.arc(px,py,3,0,T*2);x.fill();}
@@ -213,6 +232,14 @@ let dateTex;
   const [c2,x2]=cv(256);x2.fillStyle='#16171a';x2.fillRect(0,0,256,256);x2.textAlign='center';x2.font='18px Helvetica, Arial';x2.fillStyle='#565a61';x2.fillText('SiP · 2027',128,168);
   const chipTex=tex(c2);const top=new THREE.Mesh(new THREE.PlaneGeometry(.86,.86),new THREE.MeshStandardMaterial({map:chipTex,metalness:.6,roughness:.3}));top.position.z=.111;g.add(top);
   whenLogo(img=>{const L=tintLogo(img,'#80848c',170);x2.drawImage(L,128-L.width/2,118-L.height/2);chipTex.needsUpdate=true;});
+}
+/* 06 battery */
+{const g=layer(-.45,.78);
+  const [c,x]=cv(256);x.fillStyle='#c3c7ce';x.fillRect(0,0,256,256);x.fillStyle='#8d929a';x.fillRect(0,0,256,10);x.fillRect(0,246,256,10);
+  x.fillStyle='#5d626a';x.font='600 15px Helvetica, Arial';x.textAlign='center';x.fillText('Li-ion · 3.85 V',128,140);
+  const bat=new THREE.Mesh(new THREE.ExtrudeGeometry(rr(2.0,1.45,.2),{depth:.12,bevelEnabled:true,bevelThickness:.02,bevelSize:.02,bevelSegments:2}),new THREE.MeshStandardMaterial({color:0xffffff,map:tex(c),metalness:.75,roughness:.38}));
+  bat.position.z=-.07;g.add(bat);
+  const tab=new THREE.Mesh(new THREE.BoxGeometry(.5,.18,.03),new THREE.MeshStandardMaterial({color:0xc98a2e,metalness:.6,roughness:.35}));tab.position.set(0,.8,.04);g.add(tab);
 }
 /* 07 case + crown + strap */
 
@@ -343,7 +370,7 @@ let dateTex;
     if(t>=TL.beat&&t<TL.end){const bt=t-TL.beat,b=Math.floor(bt),p=bt-b;const env=x=>x<0?0:Math.exp(-x*9);pulse=(env(p)+.6*env(p-.2))*(b<3?1:.6);}
     pivot.scale.setScalar(1+.028*pulse);
     glow.material.opacity=(heart?.08:0)+.5*pulse;
-    dialMat.emissiveIntensity=.03+.6*pulse+(!heart&&st>=5&&st<8?.18:0);
+    dialMat.emissiveIntensity=.03+.6*pulse+(!heart&&st>=3&&st<8?.18:0);
     /* framing: keep the watch clear of the caption */
     const ui=uiAt(t),panelOn=ui*(1-E(clamp((t-TL.heart)/.6)));
     const panelPx=118*panelOn,topPx=40,frac=Math.max(.35,(CH-panelPx-topPx)/CH),tn=Math.tan(camera.fov*T/360);
@@ -488,7 +515,7 @@ window.__renderAt=async(variant,W,t)=>{await logoReady;await fontsReady;window._
 window.__TL=TL;
 
 /* ---------- AR: find the card, play the film on it ---------- */
-const CACHE_KEY='octagon-cards-v2';
+const CACHE_KEY='octagon-cards-v3';
 function b64(buf){let s='';const b=new Uint8Array(buf);for(let i=0;i<b.length;i+=0x8000)s+=String.fromCharCode.apply(null,b.subarray(i,i+0x8000));return btoa(s);}
 function unb64(s){const b=atob(s),u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return u;}
 let film=null;
