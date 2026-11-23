@@ -28,6 +28,14 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 #logoTop{position:fixed;top:calc(22px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);height:16px;z-index:10;opacity:0;transition:opacity 1.2s}
 #logoTop.on{opacity:.85}
 #next.wait{opacity:.45}
+#next.touch{border-color:#16a37f;background:rgba(22,163,127,.35);animation:tp 1.6s ease-in-out infinite}
+@keyframes tp{50%{box-shadow:0 0 0 10px rgba(22,163,127,0)}0%,100%{box-shadow:0 0 0 0 rgba(22,163,127,.55)}}
+#mine{position:fixed;left:50%;bottom:calc(92px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(10px);z-index:11;display:flex;flex-direction:column;gap:10px;align-items:center;opacity:0;pointer-events:none;transition:opacity .6s,transform .6s}
+#mine.on{opacity:1;pointer-events:auto;transform:translateX(-50%)}
+#mine .row{display:flex;gap:8px;align-items:center}
+#mine .lab{font-size:10px;letter-spacing:.28em;text-transform:uppercase;color:rgba(233,236,242,.6);width:56px;text-align:right;margin-right:6px}
+#mine .chip{font-family:inherit;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink);background:rgba(10,30,28,.5);border:1px solid var(--line);padding:10px 14px;cursor:pointer;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+#mine .chip.sel{border-color:#16a37f;background:rgba(22,163,127,.4)}
 #head{position:fixed;left:0;right:0;bottom:calc(92px + env(safe-area-inset-bottom));z-index:10;text-align:center;pointer-events:none;font-family:"OC Serif","Times New Roman",serif;font-size:34px;color:#eef2f2;text-shadow:0 2px 18px rgba(0,0,0,.55);opacity:0;transform:translateY(8px);transition:opacity .5s,transform .5s}
 #head.on{opacity:1;transform:none}
 @media (max-width:600px){#head{font-size:28px;bottom:calc(84px + env(safe-area-inset-bottom))}}
@@ -39,6 +47,8 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 <img id="logoTop" alt="AP × Apple">
 <div id="intro"><img id="logoIntro" alt="AP × Apple"><button class="btn" id="enter">Enter</button><div class="s" id="status">Sound on</div></div>
 <div id="head"></div>
+<div id="mine"><div class="row"><span class="lab">Strap</span><button class="chip sel" data-k="strap" data-v="steel">Steel</button><button class="chip" data-k="strap" data-v="rubber">Rubber</button></div>
+<div class="row"><span class="lab">Dial</span><button class="chip sel" data-k="dial" data-v="green">AP Green</button><button class="chip" data-k="dial" data-v="midnight">Midnight</button><button class="chip" data-k="dial" data-v="smoke">Smoke</button></div></div>
 <div id="ui"><div id="pips"></div><button class="btn" id="next">Next</button></div>
 <script type="module">
 import * as THREE from 'three';
@@ -192,6 +202,8 @@ for(let h=1;h<=12;h++){const th=h*T/6,x=R_TICK*Math.sin(th),z=-R_TICK*Math.cos(t
   glow.rotation.x=-T/2;glow.position.y=.005;g.add(glow);
   ticks.push({h,g,ringMat,glow,lit:0});}
 const tickByHour=h=>ticks[h-1];
+const spark=(()=>{const[c,x]=canvas(128);const g=x.createRadialGradient(64,64,0,64,64,64);g.addColorStop(0,'#fff');g.addColorStop(.35,'rgba(255,255,255,.5)');g.addColorStop(1,'rgba(0,0,0,0)');x.fillStyle='#000';x.fillRect(0,0,128,128);x.fillStyle=g;x.fillRect(0,0,128,128);
+  const m=new THREE.Mesh(new THREE.PlaneGeometry(.9,.9),new THREE.MeshBasicMaterial({color:new THREE.Color('#16a37f'),alphaMap:new THREE.CanvasTexture(c),transparent:true,depthWrite:false,opacity:0}));m.rotation.x=-T/2;m.visible=false;m.renderOrder=2;scene.add(m);return m;})();
 
 /* light beams onto each tick */
 const beamMat=new THREE.ShaderMaterial({transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,side:THREE.DoubleSide,
@@ -240,8 +252,8 @@ float rsm(float a,float b,float x){return 1.-smoothstep(a,b,x);}void main(){
   float sw=(q.x+q.y*.4)-mod(uTime*1.6,40.)+10.;float sweep=exp(-sw*sw*.08);
   col+=uC3*sweep*.18*(1.-groove);
   float ring=uRing<0.?0.:exp(-abs(d-uRing)*3.5)*.9;
-  col+=uC3*(ring+uPulse*.55)*(1.-groove*.6);
-  col*=1.+uPulse*.6;
+  col+=uC3*(ring+uPulse*.25)*(1.-groove*.6);
+  col*=1.+uPulse*.3;
   /* LED pixel grain */
   col*=1.-.06*pat*h21(floor(q*90.)+floor(uTime*24.));
   /* the invitation, written across the walls */
@@ -589,6 +601,19 @@ const key=new THREE.DirectionalLight(0xffffff,0);key.position.set(2.5,5,6);key.t
 const holoRoot=new THREE.Group();scene.add(holoRoot);
 const HS=.19;pivot.scale.setScalar(HS);holoRoot.add(pivot);
 loopG.visible=false;braceletG.visible=true;
+/* twelve layers, one for each guest */
+{const [Lcr,Lbz,Ldi,Lto,Lsi,Lba,Lca,Lbk]=layers;
+ const split=(src,pick,a,e,extra)=>{const g=new THREE.Group();g.position.z=a;model.add(g);src.g.children.filter(pick).forEach(k=>g.add(k));return Object.assign({g,a,e,lifted:false},extra||{});};
+ const screws=split(Lbz,o=>o.isGroup,.08,5.7);
+ const crownL=split(Lca,o=>o.isMesh&&o.position.x>2.05,0,0,{ax:'x',ex:1.7});
+ const brace=split(Lca,o=>o===braceletG||o===loopG,0,-1.05);
+ const dome=split(Lbk,o=>o.isMesh&&o.material&&o.material.isMeshPhysicalMaterial,-.6,-3.3);
+ Lbk.e=-2.25;
+ layers.length=0;layers.push(Lcr,screws,Lbz,Ldi,Lto,Lsi,Lba,Lca,crownL,brace,dome,Lbk);}
+const dialMats=[];layers[3].g.traverse(o=>{if(o.isMesh&&o.material&&o.material.map&&!dialMats.includes(o.material))dialMats.push(o.material);});
+const DIALS={green:0xffffff,midnight:0x7d90d8,smoke:0xa9adb3};
+const MINE={strap:'steel',dial:'green'};
+function applyMine(){braceletG.visible=MINE.strap==='steel';loopG.visible=MINE.strap==='rubber';dialMats.forEach(m=>m.color.setHex(DIALS[MINE.dial]));}
 
 /* ================================================================
    POST — bloom, the tone of film
@@ -640,13 +665,16 @@ const setAmb=v=>{if(ac&&amb&&!SIMS.on)amb.gain.setTargetAtTime(v,ac.currentTime,
 /* ================================================================
    THE WALKTHROUGH — each Next is one moment
    ================================================================ */
-const HEADS={5:'Sapphire crystal',6:'The octagon',7:'The display',8:'Touch layer',9:'Apple silicon',10:'Battery',11:'Case & strap',12:'The caseback'};
-const St={txtW:'',txtWA:0,dark:0,txtA:0,logoA:0,room:.18,wall:0,ceil:0,floor:0,base:0,column:0,riseY:-.6,revealY:-1,op:0,pulse:0,invite:0,dissolve:0,burst:0,ring:-1,fade:0};
+const LAYER_NAMES=['Sapphire crystal','Hexagonal screws','The octagon','The display','Touch layer','Apple silicon','Battery','The case','The crown','The bracelet','The sensors','The caseback'];
+const HEADS={};LAYER_NAMES.forEach((n,i)=>HEADS[5+i]=n);const HB=17,MINE_STEP=18;HEADS[MINE_STEP]='Make it yours';
+const OWN=6;  /* our guest stands on the 6 o'clock tick */
+const tickFlash=new Array(13).fill(0);let touched=false;
+const St={sparkK:1,sparkP:0,txtW:'',txtWA:0,dark:0,txtA:0,logoA:0,room:.18,wall:0,ceil:0,floor:0,base:0,column:0,riseY:-.6,revealY:-1,op:0,pulse:0,invite:0,dissolve:0,burst:0,ring:-1,fade:0};
 const lit=new Array(13).fill(0);
 const cur={tilt:-.2,spin:0,c:0};let poseT={tilt:-.2,spin:0,c:0},yawAmp=.35;
 const camS={pos:new V3(0,EYE,24),look:new V3(0,2.4,0),posT:new V3(0,EYE,24),lookT:new V3(0,2.4,0),k:2.2,rail:false};
 const OTHERS=[7,8,9,10,11,12,1,2,3,4,5];
-const LAYER_POSE=k=>k===8?{tilt:-3.6,spin:-.5,c:-1}:{tilt:-1.02,spin:k===7?1:.5,c:2.3};
+const LAYER_POSE=k=>k>=11?{tilt:-3.6,spin:-.5,c:-1.2}:k===9?{tilt:-1.1,spin:1.35,c:1.6}:k>=8?{tilt:-1.02,spin:1,c:2.1}:{tilt:-1.02,spin:.5,c:2.3};
 const STEPS=[
  {dur:0,run(t){camS.rail=false;camS.posT.set(0,EYE,24);camS.lookT.set(0,2.3,0);Object.assign(St,{txtW:'',txtWA:0,room:.18,dark:0,txtA:0,logoA:0,wall:0,ceil:0,floor:0,base:0,column:0,op:0,dissolve:0,burst:0,ring:-1,pulse:0});}},
  {dur:10,run(t,at){camS.rail=true;
@@ -677,13 +705,25 @@ const STEPS=[
    St.wall=ease((t-.1)/2.4);St.ceil=ease((t-.5)/2.2);St.logoA=1-ease((t-2.4)/.6);St.txtW='';St.ring=t>.1?(t-.1)*3.2:-1;
    at(.1,'sw',()=>sweep(2.6,200,3200,.14));at(.3,'amb',()=>setAmb(.9));
    at(.2,'r',()=>riser(4.2));}},
- ...[1,2,3,4,5,6,7,8].map(k=>({dur:2.6,run(t,at){camS.posT.set(0,EYE-.03,R_TICK-.45);camS.lookT.set(0,1.52,0);camS.k=1.1;
-   poseT=LAYER_POSE(k);yawAmp=.08;St.txtW=HEADS[si]||'';St.txtWA=ease((t-.15)/.4);layers.forEach((L,i)=>{L.lifted=i<k&&L.e!==L.a;});at(.05,'c',()=>chime(k-1));}})),
- {dur:5.6,run(t,at){camS.posT.set(0,EYE,R_TICK);camS.lookT.set(0,1.52,0);camS.k=1.2;
-   poseT={tilt:-.16,spin:0,c:0};yawAmp=.2;layers.forEach(L=>L.lifted=false);St.txtW='';at(.05,'d',()=>chime(0,true));
+ ...[1,2,3,4,5,6,7,8,9,10,11,12].map(k=>({dur:3,touch:k===OWN,
+   idle(){camS.posT.set(0,EYE,R_TICK+1.15);camS.lookT.set(0,0,R_TICK-.1);camS.k=1.4;St.txtW='Touch your tick';St.txtWA=1;lit[OWN]=.55+.45*Math.sin(wt*4.2);},
+   run(t,at){camS.posT.set(0,EYE-.03,R_TICK-.45);camS.k=k===OWN?1.6:1.1;
+   if(k===OWN&&t<.45)camS.lookT.set(0,0,R_TICK-.1);else camS.lookT.set(0,1.52,0);
+   lit[k]=1;St.sparkK=k;St.sparkP=clamp((t-.05)/.5);
+   poseT=LAYER_POSE(k);yawAmp=.08;St.txtW=HEADS[si]||'';St.txtWA=ease((t-.65)/.4);
+   layers.forEach((L,i)=>{L.lifted=(i<k-1||(i===k-1&&t>=.55))&&(L.e!==L.a||L.ax);});
+   at(.02,'tf',()=>{tickFlash[k]=1;thump(0,.35);});at(.55,'c',()=>chime(k-1,k>8));}})),
+ {dur:5.6,touch:true,label:'Hold your tick',
+   idle(){camS.posT.set(0,EYE,R_TICK);camS.lookT.set(0,1.52,0);camS.k=1.2;poseT={tilt:-.16,spin:0,c:0};yawAmp=.2;layers.forEach(L=>L.lifted=false);St.txtW='Hold your tick';St.txtWA=1;},
+   run(t,at){camS.posT.set(0,EYE,R_TICK);camS.lookT.set(0,1.52,0);camS.k=1.2;
+   for(let h=1;h<=12;h++){lit[h]=1;at(.05+h*.05,'hb'+h,()=>{tickFlash[h]=1;});}
+   poseT={tilt:-.16,spin:0,c:0};yawAmp=.2;layers.forEach(L=>L.lifted=false);St.txtW=t<1.2?'':'Twelve heartbeats. One watch.';St.txtWA=ease((t-1.2)/.6);at(.05,'d',()=>chime(0,true));
    let pulse=0;const bt=t-2.2;if(bt>=0){const b=Math.floor(bt),p=bt-b;if(b<3){const env=x=>x<0?0:Math.exp(-x*9);pulse=env(p)+.6*env(p-.2);}
      for(let b2=0;b2<3;b2++)at(2.2+b2,'b'+b2,()=>{thump(0,.9);thump(.2,.55);try{navigator.vibrate&&navigator.vibrate([35,160,25]);}catch(e){}});}
-   St.pulse=pulse;}},
+   St.pulse=pulse;if(pulse>.5)for(let h=1;h<=12;h++)tickFlash[h]=Math.max(tickFlash[h],pulse*.45);}},
+ {dur:2.4,run(t,at){camS.posT.set(0,EYE,R_TICK-.3);camS.lookT.set(0,1.55,0);camS.k=1.2;
+   poseT={tilt:-.5,spin:0,c:0};yawAmp=1.1;layers.forEach(L=>L.lifted=false);St.txtW=HEADS[si];St.txtWA=ease((t-.3)/.5);St.pulse=0;
+   at(.1,'mi',()=>chime(2,false,.6));}},
  {dur:8,run(t,at){camS.posT.set(0,EYE,R_TICK);camS.k=.9;camS.lookT.set(0,lerp(1.55,3.1,ease((t-1)/4)),0);
    St.txtW='';St.pulse=0;St.dissolve=ease((t-.5)/2.8);St.revealY=lerp(3.4,0,ease((t-.6)/2.8));St.burst=t<.5?0:t<4.5?1:1-ease((t-4.5)/2.5);St.column=lerp(.06,0,ease((t-.5)/2));
    St.base=lerp(1,.25,ease((t-3)/3));St.ring=t>.6?(t-.6)*2.6:-1;
@@ -692,9 +732,9 @@ const STEPS=[
 ];
 const N=STEPS.length;
 let si=0,stT=0,fired=new Set();
-function enter(i){si=i;stT=0;fired=new Set();}
-function runStep(dt){const S=STEPS[si];stT=Math.min(S.dur,stT+dt);const at=(time,id,fn)=>{if(stT>=time&&!fired.has(id)){fired.add(id);fn();}};S.run(stT,at);}
-const done=()=>stT>=STEPS[si].dur;
+function enter(i){si=i;stT=0;fired=new Set();touched=false;}
+function runStep(dt){const S=STEPS[si];if(S.touch&&!touched){S.idle&&S.idle(dt);return;}stT=Math.min(S.dur,stT+dt);const at=(time,id,fn)=>{if(stT>=time&&!fired.has(id)){fired.add(id);fn();}};S.run(stT,at);}
+const done=()=>stT>=STEPS[si].dur&&(!STEPS[si].touch||touched);
 
 /* ---------- per-frame world update ---------- */
 let wt=0,lastSec=-1;
@@ -713,7 +753,7 @@ function world(dt){
   coveMat.color.setRGB(1.3,1.45,1.45).multiplyScalar((.15+.85*St.room)*(1-.5*St.wall)*(camS.pos.z>A+TUN?.3:1));coveLow.color.setRGB(.55,.7,.68).multiplyScalar(.15+.85*St.room);
   hemi.intensity=lerp(.35,.12,St.room);moon.intensity=lerp(.55,.05,St.room);ups.forEach(u=>u.intensity=lerp(160,10,St.room));
   scene.fog.density=lerp(.02,.003,St.room);
-  greenLight.intensity=St.wall*14*(1-.6*St.op)+St.pulse*18;holoLight.intensity=St.op*.6*(1-St.dissolve)+St.pulse*2;key.intensity=St.op*.8*(1-St.dissolve);
+  greenLight.intensity=St.wall*14*(1-.6*St.op)+St.pulse*5;holoLight.intensity=St.op*.6*(1-St.dissolve)+St.pulse*2;key.intensity=St.op*.8*(1-St.dissolve);
   CLIP[0].constant=St.revealY;pivot.visible=St.op>.01&&St.revealY>0;
   {const r=St.revealY;const on=St.op>.01&&r>0&&r<3.3&&(si===4||si===N-1);scanRing.visible=on;scanRing.position.y=Math.max(.01,r);scanRing.material.opacity=on?.9:0;}
   watchMats.forEach(m=>{const o=m.userData.op*(1-St.dissolve*.25);if(Math.abs(m.opacity-o)>.001){m.opacity=o;}});
@@ -722,15 +762,16 @@ function world(dt){
   screenU.uDark.value=St.dark;screenU.uTxtA.value=St.txtA;screenU.uLogoA.value=St.logoA;screenU.uPulse.value=St.pulse;screenU.uInvite.value=St.invite;screenU.uRing.value=St.ring;
   updateEnv((St.wall+St.ceil+St.floor)/3,camS.pos.z<A+TUN);
   /* ticks */
-  for(let h=1;h<=12;h++){const t=ticks[h-1],v=lit[h];t.ringMat.color.setRGB(.9,1.5,1.35).multiplyScalar(.04+v*1.1+St.pulse*.4);t.glow.material.color.setRGB(.06,.22,.18).multiplyScalar(v);t.beam.uniforms.uI.value=v*(1-.55*St.wall);}
+  for(let h=1;h<=12;h++){const t=ticks[h-1],v=lit[h];tickFlash[h]*=Math.exp(-dt*2.2);const f=tickFlash[h];t.ringMat.color.setRGB(.9,1.5,1.35).multiplyScalar(.04+v*1.1+St.pulse*.4+f*2.2);t.glow.material.color.setRGB(.06,.22,.18).multiplyScalar(v);t.beam.uniforms.uI.value=v*(1-.55*St.wall)+f*.35;}
+  {const p=St.sparkP||0,on=p>0&&p<1;spark.visible=on;if(on){const T0=ticks[St.sparkK-1].g.position,e=ease(p);spark.position.set(T0.x*(1-e),.03,T0.z*(1-e));spark.material.opacity=Math.sin(p*Math.PI);spark.scale.setScalar(1+.6*Math.sin(p*Math.PI));}}
   /* projector, column, particles */
   projector.opacity=Math.min(1,St.base*(1+St.pulse));columnMat.uniforms.uI.value=St.column;
   dust.uniforms.uI.value=.35*St.room*(1-.4*St.wall);holoDust.uniforms.uI.value=St.base*(.9-.78*St.op*(1-St.dissolve));burst.uniforms.uI.value=St.burst*1.4;
   /* the hologram */
-  const kk=1-Math.exp(-dt*(si===N-2?3.4:2.2)),kl=1-Math.exp(-dt*3.6);
+  const kk=1-Math.exp(-dt*(si===HB?3.4:2.2)),kl=1-Math.exp(-dt*3.6);
   cur.tilt+=(poseT.tilt-cur.tilt)*kk;cur.spin+=(poseT.spin-cur.spin)*kk;cur.c+=(poseT.c-cur.c)*kk;
   tilt.rotation.set(cur.tilt,0,cur.spin);model.position.z=-cur.c;
-  layers.forEach(L=>{const tt=L.lifted?L.e:L.a;L.g.position.z+=(tt-L.g.position.z)*kl;});
+  layers.forEach(L=>{if(L.ax==='x'){const tx=L.lifted?L.ex:0;L.g.position.x+=(tx-L.g.position.x)*kl;}else{const tt=L.lifted?L.e:L.a;L.g.position.z+=(tt-L.g.position.z)*kl;}});
   pivot.rotation.y=yawAmp*Math.sin(wt*.27);
   holoRoot.position.y=St.riseY;pivot.scale.setScalar(HS*(1+.025*St.pulse));
   holoU.uOp.value=St.op;holoU.uRevealY.value=St.revealY;holoU.uDissolve.value=St.dissolve;holoU.uPulse.value=St.pulse;
@@ -741,7 +782,7 @@ function world(dt){
 }
 /* fast-forward without sound, used by Next while a moment is still playing, and by Back */
 function simulate(sec){SIMS.on=true;const dt=1/30;for(let t=0;t<sec;t+=dt){runStep(dt);world(dt);}SIMS.on=false;}
-function goTo(n){SIMS.on=true;enter(0);for(let k=0;k<=n;k++){if(k>0)enter(k);for(let t=0;t<=STEPS[k].dur+.01;t+=1/30){runStep(1/30);world(1/30);}}for(let t=0;t<3;t+=1/30)world(1/30);SIMS.on=false;}
+function goTo(n){SIMS.on=true;enter(0);for(let k=0;k<=n;k++){if(k>0)enter(k);touched=true;for(let t=0;t<=STEPS[k].dur+.01;t+=1/30){runStep(1/30);world(1/30);}}for(let t=0;t<3;t+=1/30)world(1/30);SIMS.on=false;}
 
 /* ---------- UI ---------- */
 const pips=$('pips');for(let i=0;i<N;i++){const d=document.createElement('div');d.className='pip';pips.appendChild(d);}
@@ -749,14 +790,18 @@ const pips=$('pips');for(let i=0;i<N;i++){const d=document.createElement('div');
 let headShown=null;
 function head(){const h=HEADS[si]||'';if(h===headShown)return;headShown=h;const el=$('head');el.classList.remove('on');setTimeout(()=>{el.textContent=h;if(h)el.classList.add('on');},h&&el.textContent?380:0);}
 function ui(){[...pips.children].forEach((p,i)=>{p.classList.toggle('on',i<=si);p.classList.toggle('now',i===si);});
-  $('next').textContent=si===N-1?'Replay':si===0?'Walk in':'Next';$('next').classList.toggle('wait',!done());}
+  const S=STEPS[si],wt2=S.touch&&!touched;$('next').textContent=si===N-1?'Replay':si===0?'Walk in':wt2?(S.label||'Touch your tick'):'Next';$('next').classList.toggle('touch',!!wt2);$('next').classList.toggle('wait',!wt2&&!done());
+  $('mine').classList.toggle('on',si===MINE_STEP);}
 function next(){
+  {const S=STEPS[si];if(S.touch&&!touched){touched=true;ui();return;}}
   if(!done()){simulate(STEPS[si].dur-stT+.01);ui();return;}
   if(si===N-1){goTo(0);setAmb(.25);ui();return;}
   enter(si+1);ui();}
 $('next').onclick=()=>{initAudio();next();};
 addEventListener('keydown',e=>{if(!started)return;if(e.key===' '||e.key==='ArrowRight'||e.key==='Enter'){e.preventDefault();next();}else if(e.key==='ArrowLeft'&&si>0){goTo(si-1);ui();}});
 let started=false;
+document.querySelectorAll('#mine .chip').forEach(b=>b.onclick=()=>{initAudio();MINE[b.dataset.k]=b.dataset.v;document.querySelectorAll('#mine .chip[data-k="'+b.dataset.k+'"]').forEach(o=>o.classList.toggle('sel',o===b));applyMine();chime(b.dataset.k==='dial'?4:1,false,.5);});
+renderer.domElement.addEventListener('pointerdown',()=>{if(started&&STEPS[si].touch&&!touched){initAudio();next();}});
 $('enter').onclick=()=>{initAudio();setAmb(.25);started=true;$('intro').classList.add('gone');$('ui').classList.add('on');$('logoTop').classList.add('on');ui();};
 
 /* ---------- loop ---------- */
@@ -769,7 +814,7 @@ function frame(){const now=performance.now()/1000,dt=Math.min(.05,now-last);last
   St.fade=Math.min(1,St.fade+dt*.5);runStep(dt);world(dt);if(started&&Math.random()<.2)ui();composer.render();}
 renderer.setAnimationLoop(P.has('shot')?null:frame);
 window.__dbg={goTo:(n,extra=0)=>{goTo(n);if(extra)simulate(extra);St.fade=1;grade.uniforms.uFade.value=1;composer.render();return si;},
-  mid:(n,t)=>{goTo(n-1);SIMS.on=true;enter(n);simulate(t);SIMS.on=false;St.fade=1;grade.uniforms.uFade.value=1;world(0);composer.render();},render:()=>composer.render(),St,renderer,composer,scene,camera,grade,bloom,holoRoot,pivot,holoU,get si(){return si;}};
+  mid:(n,t,idle)=>{goTo(n-1);SIMS.on=true;enter(n);touched=!idle;simulate(t);SIMS.on=false;St.fade=1;grade.uniforms.uFade.value=1;world(0);composer.render();},render:()=>composer.render(),St,renderer,composer,scene,camera,grade,bloom,holoRoot,pivot,holoU,get si(){return si;}};
 $('status').textContent='Sound on';
 </script>
 </body>
