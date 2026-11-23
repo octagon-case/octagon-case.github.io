@@ -28,7 +28,8 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 #logoTop{position:fixed;top:calc(22px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);height:16px;z-index:10;opacity:0;transition:opacity 1.2s}
 #logoTop.on{opacity:.85}
 #next.wait{opacity:.45}
-#next.touch{border-color:#16a37f;background:rgba(22,163,127,.35);animation:tp 1.6s ease-in-out infinite}
+canvas{touch-action:none}
+#next.touch{border-color:#16a37f;background:linear-gradient(90deg,rgba(22,163,127,.85) calc(var(--p,0)*100%),rgba(22,163,127,.3) 0);animation:tp 1.6s ease-in-out infinite}
 @keyframes tp{50%{box-shadow:0 0 0 10px rgba(22,163,127,0)}0%,100%{box-shadow:0 0 0 0 rgba(22,163,127,.55)}}
 #mine{position:fixed;left:50%;bottom:calc(92px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(10px);z-index:11;display:flex;flex-direction:column;gap:10px;align-items:center;opacity:0;pointer-events:none;transition:opacity .6s,transform .6s}
 #mine.on{opacity:1;pointer-events:auto;transform:translateX(-50%)}
@@ -669,7 +670,7 @@ const LAYER_NAMES=['Sapphire crystal','Hexagonal screws','The octagon','The disp
 const HEADS={};LAYER_NAMES.forEach((n,i)=>HEADS[5+i]=n);const HB=17,MINE_STEP=18;HEADS[MINE_STEP]='Make it yours';
 const OWN=6;  /* our guest stands on the 6 o'clock tick */
 const tickFlash=new Array(13).fill(0);let touched=false;
-const St={sparkK:1,sparkP:0,txtW:'',txtWA:0,dark:0,txtA:0,logoA:0,room:.18,wall:0,ceil:0,floor:0,base:0,column:0,riseY:-.6,revealY:-1,op:0,pulse:0,invite:0,dissolve:0,burst:0,ring:-1,fade:0};
+const St={dragL:-1,dragP:0,holdP:0,sparkK:1,sparkP:0,txtW:'',txtWA:0,dark:0,txtA:0,logoA:0,room:.18,wall:0,ceil:0,floor:0,base:0,column:0,riseY:-.6,revealY:-1,op:0,pulse:0,invite:0,dissolve:0,burst:0,ring:-1,fade:0};
 const lit=new Array(13).fill(0);
 const cur={tilt:-.2,spin:0,c:0};let poseT={tilt:-.2,spin:0,c:0},yawAmp=.35;
 const camS={pos:new V3(0,EYE,24),look:new V3(0,2.4,0),posT:new V3(0,EYE,24),lookT:new V3(0,2.4,0),k:2.2,rail:false};
@@ -705,16 +706,16 @@ const STEPS=[
    St.wall=ease((t-.1)/2.4);St.ceil=ease((t-.5)/2.2);St.logoA=1-ease((t-2.4)/.6);St.txtW='';St.ring=t>.1?(t-.1)*3.2:-1;
    at(.1,'sw',()=>sweep(2.6,200,3200,.14));at(.3,'amb',()=>setAmb(.9));
    at(.2,'r',()=>riser(4.2));}},
- ...[1,2,3,4,5,6,7,8,9,10,11,12].map(k=>({dur:3,touch:k===OWN,
-   idle(){camS.posT.set(0,EYE,R_TICK+1.15);camS.lookT.set(0,0,R_TICK-.1);camS.k=1.4;St.txtW='Touch your tick';St.txtWA=1;lit[OWN]=.55+.45*Math.sin(wt*4.2);},
+ ...[1,2,3,4,5,6,7,8,9,10,11,12].map(k=>({dur:3,touch:k===OWN,drag:k===OWN,label:'Drag up \u2191',
+   idle(){camS.posT.set(0,EYE-.03,R_TICK-.45);camS.lookT.set(0,1.52,0);camS.k=1.1;poseT=LAYER_POSE(k);yawAmp=.05;St.txtW='Pull your layer';St.txtWA=1;St.dragL=k-1;layers.forEach((L,i)=>{L.lifted=i<k-1&&(L.e!==L.a||L.ax);});},
    run(t,at){camS.posT.set(0,EYE-.03,R_TICK-.45);camS.k=k===OWN?1.6:1.1;
-   if(k===OWN&&t<.45)camS.lookT.set(0,0,R_TICK-.1);else camS.lookT.set(0,1.52,0);
+   camS.lookT.set(0,1.52,0);St.dragL=-1;
    lit[k]=1;St.sparkK=k;St.sparkP=clamp((t-.05)/.5);
    poseT=LAYER_POSE(k);yawAmp=.08;St.txtW=HEADS[si]||'';St.txtWA=ease((t-.65)/.4);
-   layers.forEach((L,i)=>{L.lifted=(i<k-1||(i===k-1&&t>=.55))&&(L.e!==L.a||L.ax);});
+   layers.forEach((L,i)=>{L.lifted=(i<k-1||(i===k-1&&(k===OWN||t>=.55)))&&(L.e!==L.a||L.ax);});
    at(.02,'tf',()=>{tickFlash[k]=1;thump(0,.35);});at(.55,'c',()=>chime(k-1,k>8));}})),
- {dur:5.6,touch:true,label:'Hold your tick',
-   idle(){camS.posT.set(0,EYE,R_TICK);camS.lookT.set(0,1.52,0);camS.k=1.2;poseT={tilt:-.16,spin:0,c:0};yawAmp=.2;layers.forEach(L=>L.lifted=false);St.txtW='Hold your tick';St.txtWA=1;},
+ {dur:5.6,touch:true,hold:true,label:'Press and hold',
+   idle(){camS.posT.set(0,EYE,R_TICK);camS.lookT.set(0,1.52,0);camS.k=1.2;poseT={tilt:-.16,spin:0,c:0};yawAmp=.2;layers.forEach(L=>L.lifted=false);St.txtW='Press and hold';St.txtWA=1;St.pulse=.35*St.holdP*(.5+.5*Math.sin(wt*7.5));},
    run(t,at){camS.posT.set(0,EYE,R_TICK);camS.lookT.set(0,1.52,0);camS.k=1.2;
    for(let h=1;h<=12;h++){lit[h]=1;at(.05+h*.05,'hb'+h,()=>{tickFlash[h]=1;});}
    poseT={tilt:-.16,spin:0,c:0};yawAmp=.2;layers.forEach(L=>L.lifted=false);St.txtW=t<1.2?'':'Twelve heartbeats. One watch.';St.txtWA=ease((t-1.2)/.6);at(.05,'d',()=>chime(0,true));
@@ -732,7 +733,7 @@ const STEPS=[
 ];
 const N=STEPS.length;
 let si=0,stT=0,fired=new Set();
-function enter(i){si=i;stT=0;fired=new Set();touched=false;}
+function enter(i){si=i;stT=0;fired=new Set();touched=false;St.dragP=0;St.holdP=0;St.dragL=-1;}
 function runStep(dt){const S=STEPS[si];if(S.touch&&!touched){S.idle&&S.idle(dt);return;}stT=Math.min(S.dur,stT+dt);const at=(time,id,fn)=>{if(stT>=time&&!fired.has(id)){fired.add(id);fn();}};S.run(stT,at);}
 const done=()=>stT>=STEPS[si].dur&&(!STEPS[si].touch||touched);
 
@@ -771,7 +772,8 @@ function world(dt){
   const kk=1-Math.exp(-dt*(si===HB?3.4:2.2)),kl=1-Math.exp(-dt*3.6);
   cur.tilt+=(poseT.tilt-cur.tilt)*kk;cur.spin+=(poseT.spin-cur.spin)*kk;cur.c+=(poseT.c-cur.c)*kk;
   tilt.rotation.set(cur.tilt,0,cur.spin);model.position.z=-cur.c;
-  layers.forEach(L=>{if(L.ax==='x'){const tx=L.lifted?L.ex:0;L.g.position.x+=(tx-L.g.position.x)*kl;}else{const tt=L.lifted?L.e:L.a;L.g.position.z+=(tt-L.g.position.z)*kl;}});
+  layers.forEach(L=>{if(L.ax==='x'){const tx=L.lifted?L.ex:0;L.g.position.x+=(tx-L.g.position.x)*kl;}else{let tt=L.lifted?L.e:L.a,kk2=kl;if(L===layers[St.dragL]&&!L.lifted){tt=L.a+(L.e-L.a)*.9*St.dragP;kk2=1-Math.exp(-dt*14);}L.g.position.z+=(tt-L.g.position.z)*kk2;}});
+  {const S=STEPS[si];if(S.hold&&!touched){if(holding)St.holdP=Math.min(1,(performance.now()-holdT0)/1200);else St.holdP=Math.max(0,St.holdP-dt*2);if(St.holdP>=1){holding=false;touched=true;St.holdP=0;ui();}}else St.holdP=0;$('next').style.setProperty('--p',S.drag?St.dragP:St.holdP);}
   pivot.rotation.y=yawAmp*Math.sin(wt*.27);
   holoRoot.position.y=St.riseY;pivot.scale.setScalar(HS*(1+.025*St.pulse));
   holoU.uOp.value=St.op;holoU.uRevealY.value=St.revealY;holoU.uDissolve.value=St.dissolve;holoU.uPulse.value=St.pulse;
@@ -792,16 +794,23 @@ function head(){const h=HEADS[si]||'';if(h===headShown)return;headShown=h;const 
 function ui(){[...pips.children].forEach((p,i)=>{p.classList.toggle('on',i<=si);p.classList.toggle('now',i===si);});
   const S=STEPS[si],wt2=S.touch&&!touched;$('next').textContent=si===N-1?'Replay':si===0?'Walk in':wt2?(S.label||'Touch your tick'):'Next';$('next').classList.toggle('touch',!!wt2);$('next').classList.toggle('wait',!wt2&&!done());
   $('mine').classList.toggle('on',si===MINE_STEP);}
-function next(){
-  {const S=STEPS[si];if(S.touch&&!touched){touched=true;ui();return;}}
+function next(force){
+  {const S=STEPS[si];if(S.touch&&!touched){if(S.hold&&!force)return;touched=true;St.dragP=0;ui();return;}}
   if(!done()){simulate(STEPS[si].dur-stT+.01);ui();return;}
   if(si===N-1){goTo(0);setAmb(.25);ui();return;}
   enter(si+1);ui();}
 $('next').onclick=()=>{initAudio();next();};
-addEventListener('keydown',e=>{if(!started)return;if(e.key===' '||e.key==='ArrowRight'||e.key==='Enter'){e.preventDefault();next();}else if(e.key==='ArrowLeft'&&si>0){goTo(si-1);ui();}});
+addEventListener('keydown',e=>{if(!started)return;if(e.key===' '||e.key==='ArrowRight'||e.key==='Enter'){e.preventDefault();next(true);}else if(e.key==='ArrowLeft'&&si>0){goTo(si-1);ui();}});
 let started=false;
 document.querySelectorAll('#mine .chip').forEach(b=>b.onclick=()=>{initAudio();MINE[b.dataset.k]=b.dataset.v;document.querySelectorAll('#mine .chip[data-k="'+b.dataset.k+'"]').forEach(o=>o.classList.toggle('sel',o===b));applyMine();chime(b.dataset.k==='dial'?4:1,false,.5);});
-renderer.domElement.addEventListener('pointerdown',()=>{if(started&&STEPS[si].touch&&!touched){initAudio();next();}});
+let holding=false,drag=null,holdT0=0;
+const pullDone=()=>{drag=null;touched=true;St.dragP=0;chime(5,false,.7);ui();};
+const startHold=e=>{if(!started)return;const S=STEPS[si];if(!S.touch||touched)return;initAudio();
+  if(S.hold){holding=true;holdT0=performance.now();thump(0,.3);}else if(S.drag&&e.currentTarget===renderer.domElement)drag={y:e.clientY};};
+renderer.domElement.addEventListener('pointerdown',startHold);$('next').addEventListener('pointerdown',startHold);
+addEventListener('pointermove',e=>{if(!drag)return;St.dragP=clamp((drag.y-e.clientY)/(innerHeight*.28));if(St.dragP>=1)pullDone();});
+addEventListener('pointerup',()=>{holding=false;if(drag){if(St.dragP>.55)pullDone();else{drag=null;St.dragP=0;}}});
+addEventListener('pointercancel',()=>{holding=false;drag=null;St.dragP=0;});
 $('enter').onclick=()=>{initAudio();setAmb(.25);started=true;$('intro').classList.add('gone');$('ui').classList.add('on');$('logoTop').classList.add('on');ui();};
 
 /* ---------- loop ---------- */
