@@ -28,6 +28,9 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 #logoTop{position:fixed;top:calc(22px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);height:16px;z-index:10;opacity:0;transition:opacity 1.2s}
 #logoTop.on{opacity:.85}
 #next.wait{opacity:.45}
+#head{position:fixed;left:0;right:0;bottom:calc(92px + env(safe-area-inset-bottom));z-index:10;text-align:center;pointer-events:none;font-family:"OC Serif","Times New Roman",serif;font-size:34px;color:#eef2f2;text-shadow:0 2px 18px rgba(0,0,0,.55);opacity:0;transform:translateY(8px);transition:opacity .5s,transform .5s}
+#head.on{opacity:1;transform:none}
+@media (max-width:600px){#head{font-size:28px;bottom:calc(84px + env(safe-area-inset-bottom))}}
 @media (max-width:600px){#ui{padding:0 16px calc(20px + env(safe-area-inset-bottom))}.btn{min-width:140px;padding:14px 20px}}
 </style>
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
@@ -35,6 +38,7 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 <body>
 <img id="logoTop" alt="AP × Apple">
 <div id="intro"><img id="logoIntro" alt="AP × Apple"><button class="btn" id="enter">Enter</button><div class="s" id="status">Sound on</div></div>
+<div id="head"></div>
 <div id="ui"><div id="pips"></div><button class="btn" id="next">Next</button></div>
 <script type="module">
 import * as THREE from 'three';
@@ -186,11 +190,7 @@ for(let h=1;h<=12;h++){const th=h*T/6,x=R_TICK*Math.sin(th),z=-R_TICK*Math.cos(t
   const ring=new THREE.Mesh(new THREE.ShapeGeometry(ringS),ringMat);ring.rotation.x=-T/2;ring.rotation.z=T/8;ring.position.y=.004;g.add(ring);
   const glow=new THREE.Mesh(new THREE.PlaneGeometry(2.2,2.2),new THREE.MeshBasicMaterial({map:glowTex,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,color:new THREE.Color(0,0,0)}));
   glow.rotation.x=-T/2;glow.position.y=.005;g.add(glow);
-  /* engraved hour index on the pad */
-  const[c,x2]=canvas(128);x2.fillStyle='#000';x2.fillRect(0,0,128,128);x2.fillStyle='#fff';x2.font='400 34px "OC Sans",Arial';x2.textAlign='center';x2.textBaseline='middle';x2.fillText(String(h).padStart(2,'0'),64,64);
-  const num=new THREE.Mesh(new THREE.PlaneGeometry(.18,.18),new THREE.MeshBasicMaterial({alphaMap:new THREE.CanvasTexture(c),transparent:true,color:new THREE.Color(0,0,0),depthWrite:false}));
-  num.rotation.x=-T/2;num.position.set(0,.04,.24);g.add(num);
-  ticks.push({h,g,ringMat,glow,num,lit:0});}
+  ticks.push({h,g,ringMat,glow,lit:0});}
 const tickByHour=h=>ticks[h-1];
 
 /* light beams onto each tick */
@@ -250,8 +250,8 @@ for(let i=0;i<8;i++){const a=wallDir(i),m=new THREE.Mesh(wallGeo(WW,H,i===0?DOOR
    THE PROJECTOR, THE COLUMN OF LIGHT, THE PARTICLES
    ================================================================ */
 const projector=(()=>{const[c,x]=canvas(512);x.fillStyle='#000';x.fillRect(0,0,512,512);x.strokeStyle='#fff';
-  for(let r=40;r<250;r+=26){x.lineWidth=r>220?5:1.5;x.beginPath();for(let i=0;i<=8;i++){const a=T/8+i*T/4,R=r/Math.cos(T/8);i?x.lineTo(256+R*Math.cos(a),256+R*Math.sin(a)):x.moveTo(256+R*Math.cos(a),256+R*Math.sin(a));}x.stroke();}
-  for(let i=0;i<8;i++){const a=T/8+i*T/4;x.lineWidth=1;x.beginPath();x.moveTo(256,256);x.lineTo(256+250*Math.cos(a),256+250*Math.sin(a));x.stroke();}
+  const oct=(r,w)=>{x.lineWidth=w;x.beginPath();for(let i=0;i<=8;i++){const a=T/8+i*T/4,R=r/Math.cos(T/8);i?x.lineTo(256+R*Math.cos(a),256+R*Math.sin(a)):x.moveTo(256+R*Math.cos(a),256+R*Math.sin(a));}x.stroke();};
+  x.shadowColor='#fff';x.shadowBlur=18;oct(232,7);x.shadowBlur=0;
   const m=new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(c),transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,color:new THREE.Color(0,0,0)});
   const d=new THREE.Mesh(new THREE.PlaneGeometry(1.9,1.9),m);d.rotation.x=-T/2;d.position.y=.012;scene.add(d);
   const rim=new THREE.Mesh(new THREE.ExtrudeGeometry(octShape(.98),{depth:.02,bevelEnabled:false}),steelDark);rim.rotation.x=-T/2;rim.rotation.z=T/8;rim.position.y=-.02;scene.add(rim);
@@ -282,7 +282,7 @@ const moon=new THREE.DirectionalLight(0x9ab8c4,.55);moon.position.set(-14,20,18)
 const ups=[];for(let i=0;i<8;i++){const a=wallDir(i)+T/8,sp=new THREE.SpotLight(0xd9ecef,160,16,.42,.7,2);sp.position.set((OUT_A+1.4)*Math.sin(a),.15,(OUT_A+1.4)*Math.cos(a));sp.target.position.set((OUT_A)*Math.sin(a),5.5,(OUT_A)*Math.cos(a));scene.add(sp,sp.target);ups.push(sp);}
 const roomLights=[];for(let i=0;i<4;i++){const a=i*T/2+T/4,l=new THREE.PointLight(0xe6f2f2,0,16,2);l.position.set(3.4*Math.sin(a),H-.6,3.4*Math.cos(a));scene.add(l);roomLights.push(l);}
 const greenLight=new THREE.PointLight(0x3cd8b0,0,22,1.4);greenLight.position.set(0,2.5,0);scene.add(greenLight);
-const holoLight=new THREE.PointLight(0x55ffd0,0,7,2);holoLight.position.set(0,1.6,0);scene.add(holoLight);
+const holoLight=new THREE.PointLight(0xffffff,0,6,2);holoLight.position.set(.6,2.2,1.8);scene.add(holoLight);
 /* the environment that steel reflects: rebuilt as the room turns green */
 const pmrem=new THREE.PMREMGenerator(renderer);
 const envScene=new THREE.Scene(),envWalls=[];let envOut,envGlow;
@@ -304,7 +304,7 @@ function updateEnv(g,inside){const key=Math.round(g*10)+(inside?100:0);if(key===
 /* ================================================================
    THE HOLOGRAM — the same eight layers, drawn in light
    ================================================================ */
-let pivot,tilt,model,layers,hands,dialMat,glow,braceletG,loopG;
+let pivot,tilt,model,layers,hands,dialMat,glow,braceletG,loopG,watchEnv;
 const NAME='';
 await logoReady;
 (function buildWatch(){
@@ -537,7 +537,7 @@ hands={};hands.h={rotation:{z:0}};hands.m={rotation:{z:0}};hands.s={rotation:{z:
 
 
   }finally{Math.random=mr;}
-  scene.remove(pivot);
+  scene.remove(pivot);watchEnv=scene.environment;
 })();
 const holoU={uTime:screenU.uTime,uOp:{value:0},uRevealY:{value:-1},uDissolve:{value:0},uPulse:{value:0},uC:{value:new THREE.Color(.28,1,.78)}};
 const holoVS=`varying vec3 vN,vW;varying vec2 vUv;void main(){vUv=uv;vec4 w=modelMatrix*vec4(position,1.);vW=w.xyz;vN=normalize(mat3(modelMatrix)*normal);gl_Position=projectionMatrix*viewMatrix*w;}`;
@@ -562,7 +562,12 @@ function holoMat(orig){if(holoCache.has(orig))return holoCache.get(orig);
   const m=new THREE.ShaderMaterial({transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,side:THREE.DoubleSide,fog:false,
     uniforms:Object.assign({},holoU,{uMap:{value:map},uHas:{value:map?1:0}}),vertexShader:holoVS,fragmentShader:holoFS});m.side=THREE.FrontSide;
   holoCache.set(orig,m);return m;}
-pivot.traverse(o=>{if(o.isMesh&&o.material)o.material=holoMat(o.material);});
+/* the watch keeps its own steel, dial and colours; it is revealed by a rising plane of light */
+renderer.localClippingEnabled=true;
+const CLIP=[new THREE.Plane(new V3(0,-1,0),-1),new THREE.Plane(new V3(0,1,0),0)];
+const watchMats=new Set();pivot.traverse(o=>{if(o.isMesh&&o.material){const m=o.material;if(!watchMats.has(m)){watchMats.add(m);m.clippingPlanes=CLIP;if(watchEnv&&!m.isShaderMaterial){m.envMap=watchEnv;m.envMapIntensity=1;}m.userData.op=m.transparent?m.opacity:1;m.needsUpdate=true;}}});
+const scanRing=(()=>{const m=new THREE.Mesh(new THREE.RingGeometry(.86,.9,8,1,T/8),new THREE.MeshBasicMaterial({color:new THREE.Color(1.6,3,2.6),transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,side:THREE.DoubleSide}));m.rotation.x=-T/2;scene.add(m);return m;})();
+const key=new THREE.DirectionalLight(0xffffff,0);key.position.set(2.5,5,6);key.target.position.set(0,1.5,0);scene.add(key,key.target);
 const holoRoot=new THREE.Group();scene.add(holoRoot);
 const HS=.19;pivot.scale.setScalar(HS);holoRoot.add(pivot);
 loopG.visible=false;braceletG.visible=true;
@@ -573,7 +578,7 @@ loopG.visible=false;braceletG.visible=true;
 const rt=new THREE.WebGLRenderTarget(innerWidth*DPR,innerHeight*DPR,{type:THREE.HalfFloatType});
 const composer=new EffectComposer(renderer,rt);composer.setPixelRatio(DPR);composer.setSize(innerWidth,innerHeight);
 composer.addPass(new RenderPass(scene,camera));
-const bloom=new UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight),.7,.5,.92);composer.addPass(bloom);
+const bloom=new UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight),.5,.45,1.15);composer.addPass(bloom);
 composer.addPass(new OutputPass());
 const smaa=new SMAAPass(innerWidth*DPR,innerHeight*DPR);composer.addPass(smaa);
 const grade=new ShaderPass({uniforms:{tDiffuse:{value:null},uTime:{value:0},uRes:{value:new THREE.Vector2(innerWidth,innerHeight)},uFade:{value:0}},
@@ -643,7 +648,7 @@ const STEPS=[
    St.ring=t>3.5?(t-3.5)*3.2:-1;
    at(.4,'sw',()=>sweep(2.8,200,3200,.16));at(2.1,'sh',()=>sweep(2.2,900,5200,.08));at(3.5,'bm',()=>boom());at(.6,'amb',()=>setAmb(.9));}},
  {dur:6.2,run(t,at){camS.posT.set(0,EYE,R_TICK);camS.lookT.set(0,lerp(.6,1.55,ease((t-1)/3.4)),0);camS.k=1.5;
-   St.base=ease(t/.8);St.column=t<4.6?ease((t-.4)/.8):lerp(1,.35,ease((t-4.6)/1.2));
+   St.base=ease(t/.8);St.column=t<4.6?ease((t-.4)/.8):lerp(1,.06,ease((t-4.6)/1.2));
    St.riseY=lerp(-1.1,1.5,eio((t-1.1)/3.6));St.revealY=lerp(0,3.4,ease((t-1)/3.8));St.op=ease((t-.9)/1.2);
    poseT={tilt:-.2,spin:0,c:0};yawAmp=.35;
    at(.2,'r',()=>riser(4.2));}},
@@ -655,7 +660,7 @@ const STEPS=[
      for(let b2=0;b2<3;b2++)at(2.2+b2,'b'+b2,()=>{thump(0,.9);thump(.2,.55);try{navigator.vibrate&&navigator.vibrate([35,160,25]);}catch(e){}});}
    St.pulse=pulse;}},
  {dur:8,run(t,at){camS.posT.set(0,EYE,R_TICK);camS.k=.9;camS.lookT.set(0,lerp(1.55,3.1,ease((t-1)/4)),0);
-   St.pulse=0;St.dissolve=ease((t-.5)/2.4);St.burst=t<.5?0:t<4.5?1:1-ease((t-4.5)/2.5);St.column=lerp(.35,0,ease((t-.5)/2));
+   St.pulse=0;St.dissolve=ease((t-.5)/2.8);St.revealY=lerp(3.4,0,ease((t-.6)/2.8));St.burst=t<.5?0:t<4.5?1:1-ease((t-4.5)/2.5);St.column=lerp(.06,0,ease((t-.5)/2));
    St.base=lerp(1,.25,ease((t-3)/3));St.ring=t>.6?(t-.6)*2.6:-1;
    at(.5,'ds',()=>sweep(3.2,500,5200,.12));at(.6,'end',()=>chime(0,true,.9));at(3.2,'end2',()=>chime(4,false,.6));}},
 ];
@@ -682,15 +687,18 @@ function world(dt){
   coveMat.color.setRGB(1.3,1.45,1.45).multiplyScalar((.15+.85*St.room)*(1-.5*St.wall)*(camS.pos.z>A+TUN?.3:1));coveLow.color.setRGB(.55,.7,.68).multiplyScalar(.15+.85*St.room);
   hemi.intensity=lerp(.35,.12,St.room);moon.intensity=lerp(.55,.05,St.room);ups.forEach(u=>u.intensity=lerp(160,10,St.room));
   scene.fog.density=lerp(.02,.003,St.room);
-  greenLight.intensity=St.wall*40+St.pulse*30;holoLight.intensity=St.op*6*(1-St.dissolve)+St.pulse*8;
+  greenLight.intensity=St.wall*14*(1-.6*St.op)+St.pulse*18;holoLight.intensity=St.op*.6*(1-St.dissolve)+St.pulse*2;key.intensity=St.op*.8*(1-St.dissolve);
+  CLIP[0].constant=St.revealY;pivot.visible=St.op>.01&&St.revealY>0;
+  {const r=St.revealY;const on=St.op>.01&&r>0&&r<3.3&&(si===4||si===N-1);scanRing.visible=on;scanRing.position.y=Math.max(.01,r);scanRing.material.opacity=on?.9:0;}
+  watchMats.forEach(m=>{const o=m.userData.op*(1-St.dissolve*.25);if(Math.abs(m.opacity-o)>.001){m.opacity=o;}});
   screens.walls.forEach(m=>m.material.uniforms.uReveal.value=St.wall);screens.ceil.material.uniforms.uReveal.value=St.ceil;screens.floor.material.uniforms.uReveal.value=St.floor;
   screenU.uPulse.value=St.pulse;screenU.uInvite.value=St.invite;screenU.uRing.value=St.ring;
   updateEnv((St.wall+St.ceil+St.floor)/3,camS.pos.z<A+TUN);
   /* ticks */
-  for(let h=1;h<=12;h++){const t=ticks[h-1],v=lit[h];t.ringMat.color.setRGB(.9,1.5,1.35).multiplyScalar(.04+v*1.1+St.pulse*.4);t.glow.material.color.setRGB(.06,.22,.18).multiplyScalar(v);t.num.material.color.setRGB(.9,1.2,1.1).multiplyScalar(v*.9);t.beam.uniforms.uI.value=v*(1-.55*St.wall);}
+  for(let h=1;h<=12;h++){const t=ticks[h-1],v=lit[h];t.ringMat.color.setRGB(.9,1.5,1.35).multiplyScalar(.04+v*1.1+St.pulse*.4);t.glow.material.color.setRGB(.06,.22,.18).multiplyScalar(v);t.beam.uniforms.uI.value=v*(1-.55*St.wall);}
   /* projector, column, particles */
   projector.color.setRGB(.25,1,.8).multiplyScalar(St.base*(1+St.pulse));columnMat.uniforms.uI.value=St.column;
-  dust.uniforms.uI.value=.35*St.room*(1-.4*St.wall);holoDust.uniforms.uI.value=St.base*.9*(1-St.dissolve*.8);burst.uniforms.uI.value=St.burst*1.4;
+  dust.uniforms.uI.value=.35*St.room*(1-.4*St.wall);holoDust.uniforms.uI.value=St.base*(.9-.78*St.op*(1-St.dissolve));burst.uniforms.uI.value=St.burst*1.4;
   /* the hologram */
   const kk=1-Math.exp(-dt*(si===N-2?3.4:2.2)),kl=1-Math.exp(-dt*3.6);
   cur.tilt+=(poseT.tilt-cur.tilt)*kk;cur.spin+=(poseT.spin-cur.spin)*kk;cur.c+=(poseT.c-cur.c)*kk;
@@ -710,7 +718,10 @@ function goTo(n){SIMS.on=true;enter(0);for(let k=0;k<=n;k++){if(k>0)enter(k);for
 
 /* ---------- UI ---------- */
 const pips=$('pips');for(let i=0;i<N;i++){const d=document.createElement('div');d.className='pip';pips.appendChild(d);}
-function ui(){[...pips.children].forEach((p,i)=>{p.classList.toggle('on',i<=si);p.classList.toggle('now',i===si);});
+const HEADS={4:'Eight layers.',5:'Sapphire crystal',6:'The octagon',7:'The display',8:'Touch layer',9:'Apple silicon',10:'Battery',11:'Case & strap',12:'The caseback'};
+let headShown=null;
+function head(){const h=HEADS[si]||'';if(h===headShown)return;headShown=h;const el=$('head');el.classList.remove('on');setTimeout(()=>{el.textContent=h;if(h)el.classList.add('on');},h&&el.textContent?380:0);}
+function ui(){head();[...pips.children].forEach((p,i)=>{p.classList.toggle('on',i<=si);p.classList.toggle('now',i===si);});
   $('next').textContent=si===N-1?'Replay':si===0?'Walk in':'Next';$('next').classList.toggle('wait',!done());}
 function next(){
   if(!done()){simulate(STEPS[si].dur-stT+.01);ui();return;}
