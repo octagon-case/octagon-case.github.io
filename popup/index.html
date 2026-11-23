@@ -173,7 +173,7 @@ const mirror=new Reflector(new THREE.PlaneGeometry(140,140),{textureWidth:Math.r
 mirror.rotation.x=-T/2;scene.add(mirror);
 const plaza=new THREE.Mesh(new THREE.PlaneGeometry(140,140),new THREE.MeshStandardMaterial({color:0x0b0e10,roughness:.55,roughnessMap:stoneRough,metalness:0,transparent:true,opacity:.86,envMapIntensity:.6}));
 plaza.rotation.x=-T/2;plaza.position.y=.001;plaza.renderOrder=-4;scene.add(plaza);
-const floorStone=new THREE.Mesh(new THREE.ShapeGeometry(octShape(A)),new THREE.MeshStandardMaterial({color:0x06080a,roughness:.28,roughnessMap:stoneRough,metalness:.15,transparent:true,opacity:.62,envMapIntensity:.8}));
+const floorStone=new THREE.Mesh(new THREE.ShapeGeometry(octShape(A)),new THREE.MeshStandardMaterial({color:0xffffff,emissive:0xffffff,emissiveIntensity:.74,roughness:.3,metalness:0,transparent:true,opacity:.9,envMapIntensity:.5}));
 floorStone.rotation.x=-T/2;floorStone.rotation.z=T/8;floorStone.position.y=.002;floorStone.renderOrder=-3;scene.add(floorStone);
 {const t=new THREE.Mesh(new THREE.PlaneGeometry(DOOR_W,TUN),floorStone.material);t.rotation.x=-T/2;t.position.set(0,.002,A+TUN/2);t.renderOrder=-3;scene.add(t);}
 
@@ -204,10 +204,18 @@ for(const t of ticks){const m=beamMat.clone();m.uniforms.uC.value=beamMat.unifor
 /* ================================================================
    AP GREEN SCREENS — walls, ceiling and floor
    ================================================================ */
-const screenU={uTime:{value:0},uPulse:{value:0},uInvite:{value:0},uRing:{value:-1},uC1:{value:new THREE.Color('#021a16')},uC2:{value:new THREE.Color('#13705d')},uC3:{value:new THREE.Color('#7ff0d2')}};
+const AP_GREEN='#16a37f';
+const txtCan=document.createElement('canvas');txtCan.width=1160;txtCan.height=1000;const txtTex=new THREE.CanvasTexture(txtCan);txtTex.colorSpace=THREE.SRGBColorSpace;txtTex.anisotropy=8;
+let txtNow=null;
+function wallText(t){if(t===txtNow)return;txtNow=t;const x=txtCan.getContext('2d');x.clearRect(0,0,1160,1000);x.fillStyle='#fff';x.textAlign='center';x.textBaseline='middle';
+  const F='"Times New Roman","OC Serif",Tinos,serif';
+  if(/^[0-9]$/.test(t)){x.font='400 520px '+F;x.fillText(t,580,330);}
+  else if(t){x.font='400 104px '+F;const L=t.split('|');L.forEach((l,i)=>x.fillText(l,580,330+(i-(L.length-1)/2)*138));}
+  txtTex.needsUpdate=true;}
+const screenU={uTime:{value:0},uPulse:{value:0},uInvite:{value:0},uRing:{value:-1},uDark:{value:0},uTxt:{value:txtTex},uTxtA:{value:0},uLogo:{value:null},uLogoA:{value:0},uLogoAsp:{value:.3},uG:{value:new THREE.Color(AP_GREEN)},uC1:{value:new THREE.Color('#021a16')},uC2:{value:new THREE.Color('#13705d')},uC3:{value:new THREE.Color('#7ff0d2')}};
 const screenVS=`varying vec2 vUv;varying vec3 vW;void main(){vUv=uv;vec4 w=modelMatrix*vec4(position,1.);vW=w.xyz;gl_Position=projectionMatrix*viewMatrix*w;}`;
 const screenFS=`
-uniform float uTime,uPulse,uInvite,uRing,uReveal,uMode,uW;uniform vec3 uC1,uC2,uC3;uniform sampler2D uText;uniform float uHasText;
+uniform float uTime,uPulse,uInvite,uRing,uReveal,uMode,uW,uDark,uTxtA,uLogoA,uLogoAsp;uniform vec3 uC1,uC2,uC3,uG;uniform sampler2D uText,uTxt,uLogo;uniform float uHasText;
 varying vec2 vUv;varying vec3 vW;
 float h21(vec2 p){p=fract(p*vec2(123.34,456.21));p+=dot(p,p+45.32);return fract(p.x*p.y);}
 float rsm(float a,float b,float x){return 1.-smoothstep(a,b,x);}void main(){
@@ -217,7 +225,8 @@ float rsm(float a,float b,float x){return 1.-smoothstep(a,b,x);}void main(){
   float coord=uMode<.5?vUv.y:length(vW.xz)/${(A/Math.cos(T/8)).toFixed(3)};
   float jit=h21(id)*.08;float edge=uReveal*1.15-.075;float m=step(coord+jit,edge);
   float lead=rsm(0.,.05,abs(coord+jit-edge))*step(.001,uReveal)*step(uReveal,.999);
-  if(m<.5&&lead<.01)discard;
+  float md=step(coord+jit*.5,uDark*1.1-.05);
+  if(m<.5&&lead<.01&&md<.5)discard;
   /* Grande Tapisserie: a pyramid in every square, lit by a slowly turning light */
   vec2 L=normalize(vec2(cos(uTime*.18),sin(uTime*.18)));float s;
   if(max(a.x,a.y)<.2)s=.62;else if(a.x>a.y)s=.5+.42*sign(f.x)*L.x;else s=.5+.42*sign(f.y)*L.y;
@@ -236,7 +245,12 @@ float rsm(float a,float b,float x){return 1.-smoothstep(a,b,x);}void main(){
   /* the invitation, written across the walls */
   if(uHasText>.5&&uInvite>0.){vec4 tx=texture2D(uText,vUv);col=mix(col,col*.35,uInvite*.7*smoothstep(.3,.6,vUv.y)*rsm(.62,.85,vUv.y));col+=vec3(1.,1.04,1.02)*tx.a*uInvite*1.25;}
   col+=uC3*lead*2.2;
-  gl_FragColor=vec4(col,m>.5?1.:lead);
+  /* the black screens: countdown, the line, the logo */
+  if(m<.5){vec3 k=vec3(.003,.006,.005);
+    if(uMode<.5&&uTxtA>0.){k+=uG*1.35*texture2D(uTxt,vUv).a*uTxtA;}
+    if(uMode>.5&&uLogoA>0.){vec2 lu=vec2(vW.x/4.2+.5,.5+vW.z/(4.2*uLogoAsp));if(lu.x>0.&&lu.x<1.&&lu.y>0.&&lu.y<1.)k+=uG*1.35*texture2D(uLogo,lu).a*uLogoA;}
+    col=mix(k,col,clamp(lead*1.2,0.,1.));}
+  gl_FragColor=vec4(col,(m>.5||md>.5)?1.:lead);
 }`;
 function screenMat(mode,w,text){return new THREE.ShaderMaterial({transparent:true,depthWrite:false,fog:false,side:THREE.DoubleSide,
   uniforms:Object.assign({},screenU,{uReveal:{value:0},uMode:{value:mode},uW:{value:w||1},uText:{value:text||null},uHasText:{value:text?1:0}}),vertexShader:screenVS,fragmentShader:screenFS});}
@@ -244,7 +258,7 @@ const screens={walls:[],ceil:null,floor:null};
 for(let i=0;i<8;i++){const a=wallDir(i),m=new THREE.Mesh(wallGeo(WW,H,i===0?DOOR_W:0,DOOR_H),screenMat(0,WW,null));
   m.position.set((A-.03)*Math.sin(a),0,(A-.03)*Math.cos(a));m.rotation.y=a+T;m.renderOrder=-2;scene.add(m);screens.walls.push(m);}
 {const g=new THREE.ShapeGeometry(octShape(A-.03));screens.ceil=new THREE.Mesh(g,screenMat(1));screens.ceil.rotation.x=T/2;screens.ceil.rotation.z=T/8;screens.ceil.position.y=H-.03;screens.ceil.renderOrder=-2;scene.add(screens.ceil);
- screens.floor=new THREE.Mesh(g,screenMat(1));screens.floor.rotation.x=-T/2;screens.floor.rotation.z=T/8;screens.floor.position.y=.003;screens.floor.renderOrder=-2;scene.add(screens.floor);}
+ screens.floor=new THREE.Mesh(g,screenMat(1));screens.floor.rotation.x=-T/2;screens.floor.rotation.z=T/8;screens.floor.position.y=.003;screens.floor.renderOrder=-2;screens.floor.visible=false;scene.add(screens.floor);}
 
 /* ================================================================
    THE PROJECTOR, THE COLUMN OF LIGHT, THE PARTICLES
@@ -252,7 +266,7 @@ for(let i=0;i<8;i++){const a=wallDir(i),m=new THREE.Mesh(wallGeo(WW,H,i===0?DOOR
 const projector=(()=>{const[c,x]=canvas(512);x.fillStyle='#000';x.fillRect(0,0,512,512);x.strokeStyle='#fff';
   const oct=(r,w)=>{x.lineWidth=w;x.beginPath();for(let i=0;i<=8;i++){const a=T/8+i*T/4,R=r/Math.cos(T/8);i?x.lineTo(256+R*Math.cos(a),256+R*Math.sin(a)):x.moveTo(256+R*Math.cos(a),256+R*Math.sin(a));}x.stroke();};
   x.shadowColor='#fff';x.shadowBlur=18;oct(232,7);x.shadowBlur=0;
-  const m=new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(c),transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,color:new THREE.Color(0,0,0)});
+  const m=new THREE.MeshBasicMaterial({alphaMap:new THREE.CanvasTexture(c),transparent:true,depthWrite:false,opacity:0,color:new THREE.Color(AP_GREEN)});
   const d=new THREE.Mesh(new THREE.PlaneGeometry(1.9,1.9),m);d.rotation.x=-T/2;d.position.y=.012;scene.add(d);
   const rim=new THREE.Mesh(new THREE.ExtrudeGeometry(octShape(.98),{depth:.02,bevelEnabled:false}),steelDark);rim.rotation.x=-T/2;rim.rotation.z=T/8;rim.position.y=-.02;scene.add(rim);
   return m;})();
@@ -307,6 +321,7 @@ function updateEnv(g,inside){const key=Math.round(g*10)+(inside?100:0);if(key===
 let pivot,tilt,model,layers,hands,dialMat,glow,braceletG,loopG,watchEnv;
 const NAME='';
 await logoReady;
+{const lc=tintLogo(LOGO_IMG,'#ffffff',1400);const lt=new THREE.CanvasTexture(lc);lt.anisotropy=8;screenU.uLogo.value=lt;screenU.uLogoAsp.value=lc.height/lc.width;}
 (function buildWatch(){
   const scene=new THREE.Scene();
   const mr=Math.random;Math.random=rnd(20270910);
@@ -622,14 +637,14 @@ const setAmb=v=>{if(ac&&amb&&!SIMS.on)amb.gain.setTargetAtTime(v,ac.currentTime,
 /* ================================================================
    THE WALKTHROUGH — each Next is one moment
    ================================================================ */
-const St={room:.18,wall:0,ceil:0,floor:0,base:0,column:0,riseY:-.6,revealY:-1,op:0,pulse:0,invite:0,dissolve:0,burst:0,ring:-1,fade:0};
+const St={dark:0,txtA:0,logoA:0,room:.18,wall:0,ceil:0,floor:0,base:0,column:0,riseY:-.6,revealY:-1,op:0,pulse:0,invite:0,dissolve:0,burst:0,ring:-1,fade:0};
 const lit=new Array(13).fill(0);
 const cur={tilt:-.2,spin:0,c:0};let poseT={tilt:-.2,spin:0,c:0},yawAmp=.35;
 const camS={pos:new V3(0,EYE,24),look:new V3(0,2.4,0),posT:new V3(0,EYE,24),lookT:new V3(0,2.4,0),k:2.2,rail:false};
 const OTHERS=[7,8,9,10,11,12,1,2,3,4,5];
 const LAYER_POSE=k=>k===8?{tilt:-3.6,spin:-.5,c:-1}:{tilt:-1.02,spin:k===7?1:.5,c:2.3};
 const STEPS=[
- {dur:0,run(t){camS.rail=false;camS.posT.set(0,EYE,24);camS.lookT.set(0,2.3,0);St.room=.18;}},
+ {dur:0,run(t){camS.rail=false;camS.posT.set(0,EYE,24);camS.lookT.set(0,2.3,0);Object.assign(St,{room:.18,dark:0,txtA:0,logoA:0,wall:0,ceil:0,floor:0,base:0,column:0,op:0,dissolve:0,burst:0,ring:-1,pulse:0});}},
  {dur:10,run(t,at){camS.rail=true;
    const p=eio(t/10),z=lerp(24,R_TICK,p);
    const g=Math.sin(T*clamp((p-.56)/.24));
@@ -642,15 +657,21 @@ const STEPS=[
  {dur:6.4,run(t,at){camS.rail=false;camS.posT.set(0,EYE,R_TICK);camS.k=1.6;
    if(t<2.3)camS.lookT.set(0,.02,R_TICK-.55);else camS.lookT.set(0,1.45,0);
    OTHERS.forEach((h,i)=>{const s=2.5+i*.3;lit[h]=Math.max(lit[h],ease((t-s)/.45));at(s,'t'+h,()=>chime(i%8,false,.45));});}},
- {dur:7.2,run(t,at){camS.posT.set(0,EYE,R_TICK);camS.k=1.3;
-   camS.lookT.set(0,t>1.6&&t<4.4?4.4:1.5,t>1.6&&t<4.4?-1.8:0);
-   St.wall=ease((t-.4)/2.6);St.ceil=ease((t-2.1)/2.1);St.floor=ease((t-3.5)/2.3);
-   St.ring=t>3.5?(t-3.5)*3.2:-1;
-   at(.4,'sw',()=>sweep(2.8,200,3200,.16));at(2.1,'sh',()=>sweep(2.2,900,5200,.08));at(3.5,'bm',()=>boom());at(.6,'amb',()=>setAmb(.9));}},
+ {dur:9.4,run(t,at){camS.posT.set(0,EYE,R_TICK);camS.k=1.2;
+   if(t<6.9)camS.lookT.set(0,3.1,-7);else camS.lookT.set(0,5,-.9);
+   St.dark=ease((t-.2)/1.4);St.wall=0;St.ceil=0;
+   const seq=[[1.8,2.75,'3'],[2.85,3.8,'2'],[3.9,4.85,'1'],[5.0,7.0,'YOU ARE NOW|INSIDE OUR WORLD']];
+   let a=0,txt='';for(const[s0,s1,w]of seq){if(t>=s0&&t<s1){txt=w;a=Math.min(ease((t-s0)/.18),1-ease((t-(s1-.22))/.22));}}
+   wallText(txt);St.txtA=a;St.logoA=ease((t-7.2)/1.1);
+   at(.3,'amb',()=>setAmb(.35));at(.2,'dk',()=>sweep(1.6,1800,200,.08));
+   at(1.8,'c3',()=>{thump(0,.8);chime(4,false,.5);});at(2.85,'c2',()=>{thump(0,.8);chime(2,false,.5);});at(3.9,'c1',()=>{thump(0,.9);chime(0,false,.55);});
+   at(5.0,'msg',()=>{boom();chime(0,true,.8);});at(7.2,'logo',()=>{sweep(1.8,300,2400,.1);chime(5,false,.6);});}},
  {dur:6.2,run(t,at){camS.posT.set(0,EYE,R_TICK);camS.lookT.set(0,lerp(.6,1.55,ease((t-1)/3.4)),0);camS.k=1.5;
    St.base=ease(t/.8);St.column=t<4.6?ease((t-.4)/.8):lerp(1,.06,ease((t-4.6)/1.2));
    St.riseY=lerp(-1.1,1.5,eio((t-1.1)/3.6));St.revealY=lerp(0,3.4,ease((t-1)/3.8));St.op=ease((t-.9)/1.2);
    poseT={tilt:-.2,spin:0,c:0};yawAmp=.35;
+   St.wall=ease((t-.1)/2.4);St.ceil=ease((t-.5)/2.2);St.logoA=1-ease((t-2.4)/.6);St.txtA=0;St.ring=t>.1?(t-.1)*3.2:-1;
+   at(.1,'sw',()=>sweep(2.6,200,3200,.14));at(.3,'amb',()=>setAmb(.9));
    at(.2,'r',()=>riser(4.2));}},
  ...[1,2,3,4,5,6,7,8].map(k=>({dur:2.6,run(t,at){camS.posT.set(0,EYE-.03,R_TICK-.45);camS.lookT.set(0,1.52,0);camS.k=1.1;
    poseT=LAYER_POSE(k);yawAmp=.08;layers.forEach((L,i)=>{L.lifted=i<k&&L.e!==L.a;});at(.05,'c',()=>chime(k-1));}})),
@@ -662,6 +683,7 @@ const STEPS=[
  {dur:8,run(t,at){camS.posT.set(0,EYE,R_TICK);camS.k=.9;camS.lookT.set(0,lerp(1.55,3.1,ease((t-1)/4)),0);
    St.pulse=0;St.dissolve=ease((t-.5)/2.8);St.revealY=lerp(3.4,0,ease((t-.6)/2.8));St.burst=t<.5?0:t<4.5?1:1-ease((t-4.5)/2.5);St.column=lerp(.06,0,ease((t-.5)/2));
    St.base=lerp(1,.25,ease((t-3)/3));St.ring=t>.6?(t-.6)*2.6:-1;
+   const fo=1-ease((t-3.6)/3.2);St.wall=fo;St.ceil=fo;St.dark=fo;
    at(.5,'ds',()=>sweep(3.2,500,5200,.12));at(.6,'end',()=>chime(0,true,.9));at(3.2,'end2',()=>chime(4,false,.6));}},
 ];
 const N=STEPS.length;
@@ -683,7 +705,7 @@ function world(dt){
   camera.position.set(camS.pos.x+sway,camS.pos.y+bob+br-walk*.012,camS.pos.z);
   camera.lookAt(camS.look.x+dx,camS.look.y+dy,camS.look.z);
   /* the room */
-  roomLights.forEach(l=>l.intensity=lerp(0,4,St.room)*(1-.75*St.wall));
+  roomLights.forEach(l=>l.intensity=lerp(0,4,St.room)*(1-.75*St.wall)*(1-.55*St.dark*(1-St.wall)));
   coveMat.color.setRGB(1.3,1.45,1.45).multiplyScalar((.15+.85*St.room)*(1-.5*St.wall)*(camS.pos.z>A+TUN?.3:1));coveLow.color.setRGB(.55,.7,.68).multiplyScalar(.15+.85*St.room);
   hemi.intensity=lerp(.35,.12,St.room);moon.intensity=lerp(.55,.05,St.room);ups.forEach(u=>u.intensity=lerp(160,10,St.room));
   scene.fog.density=lerp(.02,.003,St.room);
@@ -692,12 +714,12 @@ function world(dt){
   {const r=St.revealY;const on=St.op>.01&&r>0&&r<3.3&&(si===4||si===N-1);scanRing.visible=on;scanRing.position.y=Math.max(.01,r);scanRing.material.opacity=on?.9:0;}
   watchMats.forEach(m=>{const o=m.userData.op*(1-St.dissolve*.25);if(Math.abs(m.opacity-o)>.001){m.opacity=o;}});
   screens.walls.forEach(m=>m.material.uniforms.uReveal.value=St.wall);screens.ceil.material.uniforms.uReveal.value=St.ceil;screens.floor.material.uniforms.uReveal.value=St.floor;
-  screenU.uPulse.value=St.pulse;screenU.uInvite.value=St.invite;screenU.uRing.value=St.ring;
+  screenU.uDark.value=St.dark;screenU.uTxtA.value=St.txtA;screenU.uLogoA.value=St.logoA;screenU.uPulse.value=St.pulse;screenU.uInvite.value=St.invite;screenU.uRing.value=St.ring;
   updateEnv((St.wall+St.ceil+St.floor)/3,camS.pos.z<A+TUN);
   /* ticks */
   for(let h=1;h<=12;h++){const t=ticks[h-1],v=lit[h];t.ringMat.color.setRGB(.9,1.5,1.35).multiplyScalar(.04+v*1.1+St.pulse*.4);t.glow.material.color.setRGB(.06,.22,.18).multiplyScalar(v);t.beam.uniforms.uI.value=v*(1-.55*St.wall);}
   /* projector, column, particles */
-  projector.color.setRGB(.25,1,.8).multiplyScalar(St.base*(1+St.pulse));columnMat.uniforms.uI.value=St.column;
+  projector.opacity=Math.min(1,St.base*(1+St.pulse));columnMat.uniforms.uI.value=St.column;
   dust.uniforms.uI.value=.35*St.room*(1-.4*St.wall);holoDust.uniforms.uI.value=St.base*(.9-.78*St.op*(1-St.dissolve));burst.uniforms.uI.value=St.burst*1.4;
   /* the hologram */
   const kk=1-Math.exp(-dt*(si===N-2?3.4:2.2)),kl=1-Math.exp(-dt*3.6);
